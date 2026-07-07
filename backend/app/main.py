@@ -14,7 +14,12 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from app.core.security import ensure_password_bootstrapped
+    from app.db.session import async_session_factory
     from app.sync.scheduler import start_scheduler, stop_scheduler
+
+    async with async_session_factory() as db:
+        await ensure_password_bootstrapped(db)
 
     await start_scheduler()
     yield

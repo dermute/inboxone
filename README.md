@@ -62,7 +62,8 @@ you open a message.
    ```
    (If you don't have Python locally, run these one-liners inside the built container
    instead: `docker compose run --rm inboxone python3 -c "..."`.)
-3. Set `APP_PASSWORD` in `.env` to a password of your choosing.
+3. Set `APP_PASSWORD` in `.env` to a password of your choosing (this only seeds the
+   *initial* password - see "Forgot your password?" below for how to reset it later).
 4. Pull and start (uses the published image from ghcr.io):
    ```bash
    docker compose up -d
@@ -118,6 +119,19 @@ free Azure AD app once:
 | `ENCRYPTION_KEY` | Fernet key used to encrypt stored IMAP/SMTP passwords and OAuth tokens at rest. Do not rotate after accounts exist without a migration - existing encrypted values would become unreadable. |
 | `DATABASE_URL` | SQLite connection string (defaults to the `/data` bind mount). |
 | `SYNC_DEFAULT_INTERVAL_SECONDS` | Default IMAP polling interval per account (minimum 30s). |
+
+## Forgot your password?
+
+`APP_PASSWORD` in `.env` only sets the *initial* password the first time the container
+starts - after that, the password lives in the database and editing `.env` no longer
+has any effect. If you forget it, reset it directly from inside the running container:
+
+```bash
+docker exec -it inboxone python -m app.cli reset-password
+```
+
+This prompts for a new password and updates it immediately, without needing to know the
+old one - no need to touch `.env` or restart anything.
 
 ## Data & privacy model
 

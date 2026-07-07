@@ -22,6 +22,18 @@ class Protocol(str, enum.Enum):
     OAUTH_MICROSOFT = "oauth_microsoft"
 
 
+class AppSettings(Base):
+    """Singleton row (id is always 1) holding app-wide settings that need to be
+    mutable at runtime - currently just the web UI login password hash, which is
+    only *seeded* from the APP_PASSWORD env var on first boot and is authoritative
+    afterwards, so it can be reset via the CLI without touching .env."""
+
+    __tablename__ = "app_settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    password_hash: Mapped[str] = mapped_column(String, nullable=False)
+
+
 class Account(Base):
     __tablename__ = "accounts"
 
