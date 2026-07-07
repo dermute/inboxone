@@ -63,9 +63,9 @@ you open a message.
    (If you don't have Python locally, run these one-liners inside the built container
    instead: `docker compose run --rm inboxone python3 -c "..."`.)
 3. Set `APP_PASSWORD` in `.env` to a password of your choosing.
-4. Build and start:
+4. Pull and start (uses the published image from ghcr.io):
    ```bash
-   docker compose up -d --build
+   docker compose up -d
    ```
 5. Open `http://localhost:8000`, log in with `APP_PASSWORD`, and add your accounts
    under Settings.
@@ -129,6 +129,16 @@ free Azure AD app once:
 - IMAP/SMTP passwords and Microsoft OAuth tokens are encrypted at rest with a
   symmetric key (`ENCRYPTION_KEY`); they are only decrypted in memory for the duration
   of a connection.
+
+## Building from source
+
+The published image (`ghcr.io/dermute/inboxone:latest`) is what `docker-compose.yml`
+uses by default. To build and run from your own checkout instead, uncomment the
+`build:` block in `docker-compose.yml` (and comment out `image:`), then:
+
+```bash
+docker compose up -d --build
+```
 
 ## Development (without Docker)
 

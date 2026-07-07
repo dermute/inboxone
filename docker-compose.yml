@@ -1,8 +1,11 @@
 services:
   inboxone:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
+    image: ghcr.io/dermute/inboxone:latest
+    # build:                        # uncomment (and comment out image:) to build from source
+    #   context: .
+    #   dockerfile: docker/Dockerfile
+    container_name: inboxone
+    init: true                     # forward signals and reap child processes cleanly
     ports:
       - "8000:8000"
     env_file:
