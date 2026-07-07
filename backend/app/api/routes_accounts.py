@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import load_only, selectinload
 
 from app.core.security import require_session
 from app.db.models import Account, Folder, Protocol
@@ -44,9 +44,36 @@ def _sync_scheduler_remove(account_id: int) -> None:
     unschedule_account_sync(account_id)
 
 
+_ACCOUNT_LIST_COLUMNS = (
+    Account.id,
+    Account.name,
+    Account.color,
+    Account.protocol,
+    Account.is_active,
+    Account.imap_host,
+    Account.imap_port,
+    Account.imap_username,
+    Account.smtp_host,
+    Account.smtp_port,
+    Account.smtp_username,
+    Account.oauth_client_id,
+    Account.oauth_tenant,
+    Account.sync_interval_seconds,
+    Account.last_sync_at,
+    Account.last_sync_status,
+    Account.last_sync_error,
+)
+
+
 @router.get("", response_model=list[AccountOut])
 async def list_accounts(db: AsyncSession = Depends(get_db)) -> list[Account]:
-    result = await db.execute(select(Account).options(selectinload(Account.folders)))
+    # load_only deliberately excludes the encrypted credential/token columns - none
+    # of them are in AccountOut anyway, and loading (and thus decrypting) them here
+    # would let one account with an undecryptable secret break the whole listing.
+    result = await db.execute(
+        select(Account)
+        .options(load_only(*_ACCOUNT_LIST_COLUMNS), selectinload(Account.folders))
+    )
     return list(result.scalars().all())
 
 
@@ -105,9 +132,14 @@ async def update_account(
 
 @router.delete("/{account_id}")
 async def delete_account(account_id: int, db: AsyncSession = Depends(get_db)) -> dict:
-    account = await _get_account_or_404(db, account_id)
-    await db.delete(account)
+    # Deliberately a raw delete-by-id rather than loading the account first: it must
+    # be possible to remove an account even if its stored credentials can no longer
+    # be decrypted. Folders/messages are cleaned up by the DB's ON DELETE CASCADE
+    # (SQLite foreign key enforcement is turned on in db/session.py).
+    result = await db.execute(delete(Account).where(Account.id == account_id))
     await db.commit()
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="Account not found")
     _sync_scheduler_remove(account_id)
     return {"ok": True}
 

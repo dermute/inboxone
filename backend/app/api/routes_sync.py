@@ -25,14 +25,25 @@ async def trigger_sync(account_id: int | None = None, db: AsyncSession = Depends
 
 @router.get("/status")
 async def sync_status(db: AsyncSession = Depends(get_db)) -> list[dict]:
-    result = await db.execute(select(Account))
+    # Select only plain columns - this view never needs credentials, and loading
+    # full Account rows would decrypt them just to discard the values, needlessly
+    # failing the whole endpoint if any one account's stored secret is undecryptable.
+    result = await db.execute(
+        select(
+            Account.id,
+            Account.name,
+            Account.last_sync_at,
+            Account.last_sync_status,
+            Account.last_sync_error,
+        )
+    )
     return [
         {
-            "account_id": a.id,
-            "name": a.name,
-            "last_sync_at": a.last_sync_at,
-            "last_sync_status": a.last_sync_status,
-            "last_sync_error": a.last_sync_error,
+            "account_id": row.id,
+            "name": row.name,
+            "last_sync_at": row.last_sync_at,
+            "last_sync_status": row.last_sync_status,
+            "last_sync_error": row.last_sync_error,
         }
-        for a in result.scalars().all()
+        for row in result.all()
     ]

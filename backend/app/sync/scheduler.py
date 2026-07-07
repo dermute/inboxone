@@ -47,15 +47,24 @@ async def _refresh_all_oauth_tokens() -> None:
 
     async with async_session_factory() as db:
         result = await db.execute(
-            select(Account).where(Account.protocol == Protocol.OAUTH_MICROSOFT.value)
+            select(Account.id).where(Account.protocol == Protocol.OAUTH_MICROSOFT.value)
         )
-        for account in result.scalars().all():
+        account_ids = [row[0] for row in result.all()]
+
+        for account_id in account_ids:
             try:
+                # Loading the full row (and thus decrypting its token cache) happens
+                # inside the try - a single corrupted/undecryptable account must not
+                # stop the others from refreshing.
+                account_result = await db.execute(select(Account).where(Account.id == account_id))
+                account = account_result.scalar_one_or_none()
+                if account is None:
+                    continue
                 client = await open_imap_connection(db, account)
                 await _safe_logout(client)
                 await get_graph_token(db, account)
             except Exception:  # noqa: BLE001 - one bad account must not block others
-                logger.exception("Failed refreshing OAuth token for account %s", account.id)
+                logger.exception("Failed refreshing OAuth token for account %s", account_id)
 
 
 async def _safe_logout(client) -> None:
@@ -66,9 +75,16 @@ async def _safe_logout(client) -> None:
 
 async def start_scheduler() -> None:
     async with async_session_factory() as db:
-        result = await db.execute(select(Account).where(Account.is_active.is_(True)))
-        for account in result.scalars().all():
-            schedule_account_sync(account.id, account.sync_interval_seconds)
+        # Deliberately select only plain (non-encrypted) columns here: loading full
+        # Account rows would decrypt every credential/token immediately, and a single
+        # corrupted or undecryptable value (e.g. ENCRYPTION_KEY changed since an
+        # account was added) would raise during app startup and crash-loop the whole
+        # container instead of just failing that one account's sync.
+        result = await db.execute(
+            select(Account.id, Account.sync_interval_seconds).where(Account.is_active.is_(True))
+        )
+        for account_id, sync_interval_seconds in result.all():
+            schedule_account_sync(account_id, sync_interval_seconds)
 
     _scheduler.add_job(
         _refresh_all_oauth_tokens,

@@ -4,7 +4,7 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -97,12 +97,30 @@ async def _sync_folder(client, db: AsyncSession, account: Account, folder: Folde
 async def sync_account(account_id: int) -> None:
     async with _sync_semaphore:
         async with async_session_factory() as db:
-            result = await db.execute(
-                select(Account)
-                .where(Account.id == account_id, Account.is_active.is_(True))
-                .options(selectinload(Account.folders))
-            )
-            account = result.scalar_one_or_none()
+            try:
+                result = await db.execute(
+                    select(Account)
+                    .where(Account.id == account_id, Account.is_active.is_(True))
+                    .options(selectinload(Account.folders))
+                )
+                account = result.scalar_one_or_none()
+            except Exception as exc:  # noqa: BLE001 - e.g. a stored credential that fails to
+                # decrypt (ENCRYPTION_KEY changed since this account was added) - record it
+                # against the account without crashing the scheduler job.
+                logger.exception("Failed to load account %s for sync", account_id)
+                await db.rollback()
+                await db.execute(
+                    update(Account)
+                    .where(Account.id == account_id)
+                    .values(
+                        last_sync_status="error",
+                        last_sync_error=f"Failed to load account: {exc}",
+                        last_sync_at=datetime.now(timezone.utc),
+                    )
+                )
+                await db.commit()
+                return
+
             if account is None:
                 return
 
