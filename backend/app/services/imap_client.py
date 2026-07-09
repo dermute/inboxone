@@ -75,6 +75,13 @@ def fetch_flags(client: IMAPClient, path: str, uids: list[int]) -> dict[int, tup
     return {uid: data.get(b"FLAGS", ()) for uid, data in response.items()}
 
 
+def mark_seen(client: IMAPClient, path: str, uids: list[int]) -> None:
+    if not uids:
+        return
+    client.select_folder(path, readonly=False)
+    client.add_flags(uids, [b"\\Seen"])
+
+
 def fetch_full_message(client: IMAPClient, path: str, uid: int, mark_seen: bool = True) -> bytes:
     client.select_folder(path, readonly=not mark_seen)
     item = "BODY[]" if mark_seen else "BODY.PEEK[]"

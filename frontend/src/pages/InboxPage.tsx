@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 
 import { useAccounts } from "../api/useAccounts";
-import { useMessages } from "../api/useMessages";
+import { useMarkAllRead, useMessages, useUpdateFlags } from "../api/useMessages";
 import AccountFilterRail from "../components/AccountFilterRail";
 import ComposeModal from "../components/ComposeModal";
 import MessageList from "../components/MessageList";
@@ -16,6 +16,8 @@ export default function InboxPage() {
   const setSelectedMessageId = useUiStore((s) => s.setSelectedMessageId);
 
   const messagesQuery = useMessages({ accountId: selectedAccountId });
+  const updateFlags = useUpdateFlags();
+  const markAllRead = useMarkAllRead();
   const messages = useMemo(
     () => messagesQuery.data?.pages.flatMap((p) => p.items) ?? [],
     [messagesQuery.data]
@@ -37,6 +39,9 @@ export default function InboxPage() {
           onLoadMore={() => messagesQuery.fetchNextPage()}
           hasMore={!!messagesQuery.hasNextPage}
           isLoading={messagesQuery.isLoading}
+          onMarkRead={(id) => updateFlags.mutate({ id, seen: true })}
+          onMarkAllRead={() => markAllRead.mutate({ accountId: selectedAccountId })}
+          markAllPending={markAllRead.isPending}
         />
       </div>
       <div className="flex-1">

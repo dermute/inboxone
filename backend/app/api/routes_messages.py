@@ -86,6 +86,55 @@ async def list_messages(
     return MessageListPage(items=items, next_cursor=next_cursor)
 
 
+@router.post("/mark-all-read")
+async def mark_all_read(
+    account_id: int | None = None,
+    folder_id: int | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    query = (
+        select(Message)
+        .where(Message.is_seen.is_(False))
+        .options(selectinload(Message.account), selectinload(Message.folder))
+    )
+    if account_id is not None:
+        query = query.where(Message.account_id == account_id)
+    if folder_id is not None:
+        query = query.where(Message.folder_id == folder_id)
+    result = await db.execute(query)
+    messages = list(result.scalars().all())
+
+    by_account: dict[int, list[Message]] = {}
+    for m in messages:
+        by_account.setdefault(m.account_id, []).append(m)
+
+    updated = 0
+    for account_messages in by_account.values():
+        account = account_messages[0].account
+        by_folder: dict[str, list[Message]] = {}
+        for m in account_messages:
+            by_folder.setdefault(m.folder.imap_path, []).append(m)
+
+        try:
+            client = await open_imap_connection(db, account)
+        except Exception:  # noqa: BLE001 - one unreachable account shouldn't block the rest
+            continue
+        try:
+            for path, folder_messages in by_folder.items():
+                uids = [m.uid for m in folder_messages]
+                await asyncio.to_thread(imap_client.mark_seen, client, path, uids)
+                for m in folder_messages:
+                    m.is_seen = True
+                    updated += 1
+        except Exception:  # noqa: BLE001 - keep whatever folders already succeeded
+            pass
+        finally:
+            await asyncio.to_thread(client.logout)
+
+    await db.commit()
+    return {"updated": updated}
+
+
 async def _fetch_and_parse(db: AsyncSession, message: Message, mark_seen: bool) -> dict:
     account = message.account
     client = await open_imap_connection(db, account)

@@ -47,6 +47,20 @@ export function useUpdateFlags() {
   });
 }
 
+export function useMarkAllRead() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ accountId, folderId }: { accountId?: number | null; folderId?: number | null }) => {
+      const params = new URLSearchParams();
+      if (accountId) params.set("account_id", String(accountId));
+      if (folderId) params.set("folder_id", String(folderId));
+      const qs = params.toString();
+      return api.post(`/api/messages/mark-all-read${qs ? `?${qs}` : ""}`);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["messages"] }),
+  });
+}
+
 export function useReply() {
   const queryClient = useQueryClient();
   return useMutation({

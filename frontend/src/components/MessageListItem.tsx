@@ -13,19 +13,43 @@ export default function MessageListItem({
   message,
   selected,
   onClick,
+  onMarkRead,
 }: {
   message: MessageSummary;
   selected: boolean;
   onClick: () => void;
+  onMarkRead: () => void;
 }) {
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") onClick();
+      }}
       style={{ borderLeftColor: message.account_color }}
-      className={`flex w-full items-start gap-3 border-l-4 px-4 py-3 text-left transition-colors ${
+      className={`flex w-full cursor-pointer items-start gap-3 border-l-4 px-4 py-3 text-left transition-colors ${
         selected ? "bg-indigo-50 dark:bg-neutral-700" : "hover:bg-gray-50 dark:hover:bg-neutral-800"
       }`}
     >
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onMarkRead();
+        }}
+        disabled={message.is_seen}
+        title={message.is_seen ? "Already read" : "Mark as read"}
+        className="mt-1.5 shrink-0 p-0.5 disabled:cursor-default"
+      >
+        <span
+          className={`block h-2.5 w-2.5 rounded-full border-2 ${
+            message.is_seen
+              ? "border-transparent bg-transparent"
+              : "border-indigo-500 bg-indigo-500 hover:bg-indigo-600"
+          }`}
+        />
+      </button>
       <span
         className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
         style={{ backgroundColor: message.account_color }}
@@ -52,6 +76,6 @@ export default function MessageListItem({
           📎
         </span>
       )}
-    </button>
+    </div>
   );
 }
