@@ -9,6 +9,7 @@ class FolderOut(BaseModel):
     display_name: str | None
     sync_enabled: bool
     last_synced_at: datetime | None
+    unread_count: int = 0
 
     model_config = {"from_attributes": True}
 

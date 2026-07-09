@@ -4,6 +4,7 @@ export interface Folder {
   display_name: string | null;
   sync_enabled: boolean;
   last_synced_at: string | null;
+  unread_count: number;
 }
 
 export interface Account {

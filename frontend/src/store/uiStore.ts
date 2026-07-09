@@ -11,9 +11,11 @@ interface ComposeState {
 
 interface UiState {
   selectedAccountId: number | null;
+  selectedFolderId: number | null;
   selectedMessageId: number | null;
   compose: ComposeState;
   setSelectedAccountId: (id: number | null) => void;
+  setSelectedFolderId: (id: number | null) => void;
   setSelectedMessageId: (id: number | null) => void;
   openReply: (params: {
     replyToMessageId: number;
@@ -36,9 +38,11 @@ const initialCompose: ComposeState = {
 
 export const useUiStore = create<UiState>((set) => ({
   selectedAccountId: null,
+  selectedFolderId: null,
   selectedMessageId: null,
   compose: initialCompose,
   setSelectedAccountId: (id) => set({ selectedAccountId: id }),
+  setSelectedFolderId: (id) => set({ selectedFolderId: id }),
   setSelectedMessageId: (id) => set({ selectedMessageId: id }),
   openReply: (params) =>
     set({

@@ -12,10 +12,22 @@ export default function InboxPage() {
   const { data: accounts } = useAccounts();
   const selectedAccountId = useUiStore((s) => s.selectedAccountId);
   const setSelectedAccountId = useUiStore((s) => s.setSelectedAccountId);
+  const selectedFolderId = useUiStore((s) => s.selectedFolderId);
+  const setSelectedFolderId = useUiStore((s) => s.setSelectedFolderId);
   const selectedMessageId = useUiStore((s) => s.selectedMessageId);
   const setSelectedMessageId = useUiStore((s) => s.setSelectedMessageId);
 
-  const messagesQuery = useMessages({ accountId: selectedAccountId });
+  function selectAccount(id: number | null) {
+    setSelectedAccountId(id);
+    setSelectedFolderId(null);
+  }
+
+  function selectFolder(accountId: number, folderId: number | null) {
+    setSelectedAccountId(accountId);
+    setSelectedFolderId(folderId);
+  }
+
+  const messagesQuery = useMessages({ accountId: selectedAccountId, folderId: selectedFolderId });
   const updateFlags = useUpdateFlags();
   const markAllRead = useMarkAllRead();
   const messages = useMemo(
@@ -29,7 +41,9 @@ export default function InboxPage() {
       <AccountFilterRail
         accounts={accounts ?? []}
         selectedAccountId={selectedAccountId}
-        onSelect={setSelectedAccountId}
+        selectedFolderId={selectedFolderId}
+        onSelect={selectAccount}
+        onSelectFolder={selectFolder}
       />
       <div className="w-[380px] shrink-0 border-r border-gray-100 dark:border-neutral-800">
         <MessageList
@@ -40,7 +54,9 @@ export default function InboxPage() {
           hasMore={!!messagesQuery.hasNextPage}
           isLoading={messagesQuery.isLoading}
           onMarkRead={(id) => updateFlags.mutate({ id, seen: true })}
-          onMarkAllRead={() => markAllRead.mutate({ accountId: selectedAccountId })}
+          onMarkAllRead={() =>
+            markAllRead.mutate({ accountId: selectedAccountId, folderId: selectedFolderId })
+          }
           markAllPending={markAllRead.isPending}
         />
       </div>

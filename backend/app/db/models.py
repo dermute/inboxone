@@ -108,6 +108,7 @@ class Message(Base):
         ),
         Index("idx_messages_date_sent", "date_sent"),
         Index("idx_messages_account_folder_uid", "account_id", "folder_id", "uid"),
+        Index("idx_messages_folder_is_seen", "folder_id", "is_seen"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

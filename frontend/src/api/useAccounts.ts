@@ -7,6 +7,7 @@ export function useAccounts() {
   return useQuery({
     queryKey: ["accounts"],
     queryFn: () => api.get<Account[]>("/api/accounts"),
+    refetchInterval: 15_000,
   });
 }
 

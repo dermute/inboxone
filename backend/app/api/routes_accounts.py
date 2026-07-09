@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only, selectinload
 
 from app.core.security import require_session
-from app.db.models import Account, Folder, Protocol
+from app.db.models import Account, Folder, Message, Protocol
 from app.db.session import get_db
 from app.schemas.account import (
     AccountCreateBasic,
@@ -74,7 +74,19 @@ async def list_accounts(db: AsyncSession = Depends(get_db)) -> list[Account]:
         select(Account)
         .options(load_only(*_ACCOUNT_LIST_COLUMNS), selectinload(Account.folders))
     )
-    return list(result.scalars().all())
+    accounts = list(result.scalars().all())
+
+    counts_result = await db.execute(
+        select(Message.folder_id, func.count(Message.id))
+        .where(Message.is_seen.is_(False))
+        .group_by(Message.folder_id)
+    )
+    counts_by_folder = dict(counts_result.all())
+    for account in accounts:
+        for folder in account.folders:
+            folder.unread_count = counts_by_folder.get(folder.id, 0)
+
+    return accounts
 
 
 @router.post("", response_model=AccountOut)
