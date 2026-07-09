@@ -43,7 +43,7 @@ export default function MessageList({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-end border-b border-gray-100 px-4 py-2 dark:border-neutral-800">
+      <div className="flex shrink-0 items-center justify-end border-b border-white/40 px-4 py-2 dark:border-white/10">
         <button
           onClick={onMarkAllRead}
           disabled={!hasUnread || markAllPending}
@@ -57,7 +57,7 @@ export default function MessageList({
           No messages yet - accounts sync automatically in the background.
         </div>
       ) : (
-        <div className="flex-1 divide-y divide-gray-100 overflow-y-auto dark:divide-neutral-800">
+        <div className="flex-1 divide-y divide-white/40 overflow-y-auto dark:divide-white/5">
           {messages.map((m) => (
             <MessageListItem
               key={m.id}

@@ -22,11 +22,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-neutral-900">
-      <form
-        onSubmit={handleSubmit}
-        className="w-full max-w-sm rounded-xl bg-white p-8 shadow-sm dark:bg-neutral-800"
-      >
+    <div className="flex min-h-screen items-center justify-center p-6">
+      <form onSubmit={handleSubmit} className="glass-panel w-full max-w-sm p-8">
         <h1 className="mb-1 text-2xl font-semibold">inboxone</h1>
         <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
           Enter the app password to continue.
@@ -37,14 +34,10 @@ export default function LoginPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
-          className="mb-3 w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-500 dark:border-neutral-600 dark:bg-neutral-700"
+          className="input mb-3 py-2"
         />
         {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={login.isPending}
-          className="w-full rounded-lg bg-indigo-600 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
+        <button type="submit" disabled={login.isPending} className="glass-button-primary w-full">
           {login.isPending ? "Signing in..." : "Sign in"}
         </button>
       </form>

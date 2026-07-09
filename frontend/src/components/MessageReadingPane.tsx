@@ -35,7 +35,7 @@ export default function MessageReadingPane({ summary }: { summary: MessageSummar
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-gray-100 px-6 py-4 dark:border-neutral-800">
+      <div className="border-b border-white/40 px-6 py-4 dark:border-white/10">
         <h2 className="text-lg font-semibold">{detail.subject || "(no subject)"}</h2>
         <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
           <span
@@ -56,12 +56,12 @@ export default function MessageReadingPane({ summary }: { summary: MessageSummar
       </div>
 
       {detail.attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2 border-t border-gray-100 px-6 py-3 dark:border-neutral-800">
+        <div className="flex flex-wrap gap-2 border-t border-white/40 px-6 py-3 dark:border-white/10">
           {detail.attachments.map((a) => (
             <a
               key={a.part_index}
               href={`/api/messages/${summary.id}/attachments/${a.part_index}`}
-              className="rounded-full border border-gray-200 px-3 py-1 text-xs hover:bg-gray-50 dark:border-neutral-700 dark:hover:bg-neutral-800"
+              className="glass-button py-1"
               download
             >
               📎 {a.filename || "attachment"}
@@ -70,7 +70,7 @@ export default function MessageReadingPane({ summary }: { summary: MessageSummar
         </div>
       )}
 
-      <div className="border-t border-gray-100 px-6 py-3 dark:border-neutral-800">
+      <div className="border-t border-white/40 px-6 py-3 dark:border-white/10">
         <button
           onClick={() =>
             openReply({
@@ -83,7 +83,7 @@ export default function MessageReadingPane({ summary }: { summary: MessageSummar
               quotedHtml: buildQuotedHtml(detail),
             })
           }
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+          className="glass-button-primary"
         >
           Reply
         </button>

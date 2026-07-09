@@ -9,11 +9,62 @@ body,
 }
 
 body {
-  @apply bg-gray-50 text-gray-900 dark:bg-neutral-900 dark:text-gray-100;
+  @apply text-gray-900 dark:text-gray-100;
+  background-color: #eef1fb;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(129, 140, 248, 0.45), transparent 42%),
+    radial-gradient(circle at 88% 12%, rgba(244, 114, 182, 0.35), transparent 45%),
+    radial-gradient(circle at 25% 88%, rgba(52, 211, 153, 0.32), transparent 45%),
+    radial-gradient(circle at 88% 85%, rgba(96, 165, 250, 0.32), transparent 45%);
+  background-attachment: fixed;
+  background-size: 180% 180%;
+  animation: drift 40s ease-in-out infinite alternate;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #08080c;
+    background-image:
+      radial-gradient(circle at 12% 18%, rgba(99, 102, 241, 0.4), transparent 45%),
+      radial-gradient(circle at 88% 12%, rgba(236, 72, 153, 0.25), transparent 48%),
+      radial-gradient(circle at 25% 88%, rgba(16, 185, 129, 0.22), transparent 48%),
+      radial-gradient(circle at 88% 85%, rgba(59, 130, 246, 0.25), transparent 48%);
+  }
+}
+
+@keyframes drift {
+  0% {
+    background-position: 0% 0%, 100% 0%, 0% 100%, 100% 100%;
+  }
+  100% {
+    background-position: 8% 10%, 92% 4%, 6% 92%, 94% 94%;
+  }
 }
 
 @layer components {
   .input {
-    @apply w-full rounded-md border border-gray-200 px-2 py-1 outline-none focus:border-indigo-500 dark:border-neutral-600 dark:bg-neutral-700;
+    @apply w-full rounded-xl border border-white/60 bg-white/50 px-3 py-1.5 text-sm text-gray-900 outline-none backdrop-blur-md transition placeholder:text-gray-400 focus:border-indigo-400 focus:bg-white/80 focus:ring-2 focus:ring-indigo-400/30 dark:border-white/10 dark:bg-white/5 dark:text-gray-100 dark:focus:bg-white/10;
+  }
+
+  /* A large floating frosted surface - the main structural building block. */
+  .glass-panel {
+    @apply relative rounded-[28px] border border-white/60 bg-white/45 shadow-[0_8px_40px_-12px_rgba(30,41,59,0.25)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.04] dark:shadow-[0_8px_40px_-12px_rgba(0,0,0,0.6)];
+  }
+
+  /* A smaller frosted surface nested inside a panel or floating on its own (rows, dialogs). */
+  .glass-card {
+    @apply rounded-2xl border border-white/60 bg-white/55 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.06];
+  }
+
+  .glass-button {
+    @apply rounded-full border border-white/50 bg-white/40 px-4 py-2 text-sm font-medium text-gray-700 backdrop-blur-md transition hover:bg-white/70 active:scale-[0.98] disabled:cursor-default disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-gray-200 dark:hover:bg-white/10;
+  }
+
+  .glass-button-primary {
+    @apply rounded-full bg-gradient-to-b from-indigo-400 to-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-[0_6px_20px_-6px_rgba(79,70,229,0.7)] transition hover:from-indigo-300 hover:to-indigo-500 hover:shadow-[0_8px_24px_-6px_rgba(79,70,229,0.85)] active:scale-[0.98] disabled:cursor-default disabled:opacity-50 disabled:hover:from-indigo-400 disabled:hover:to-indigo-600 disabled:hover:shadow-[0_6px_20px_-6px_rgba(79,70,229,0.7)];
+  }
+
+  .glass-badge {
+    @apply rounded-full border border-white/40 bg-white/50 px-1.5 py-0.5 text-xs font-medium text-indigo-700 backdrop-blur-sm dark:border-white/10 dark:bg-indigo-400/20 dark:text-indigo-300;
   }
 }

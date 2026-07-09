@@ -37,7 +37,7 @@ export default function InboxPage() {
   const selectedSummary = messages.find((m) => m.id === selectedMessageId) ?? null;
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen gap-3 p-3">
       <AccountFilterRail
         accounts={accounts ?? []}
         selectedAccountId={selectedAccountId}
@@ -45,7 +45,7 @@ export default function InboxPage() {
         onSelect={selectAccount}
         onSelectFolder={selectFolder}
       />
-      <div className="w-[380px] shrink-0 border-r border-gray-100 dark:border-neutral-800">
+      <div className="glass-panel w-[380px] shrink-0 overflow-hidden">
         <MessageList
           messages={messages}
           selectedId={selectedMessageId}
@@ -60,7 +60,7 @@ export default function InboxPage() {
           markAllPending={markAllRead.isPending}
         />
       </div>
-      <div className="flex-1">
+      <div className="glass-panel flex-1 overflow-hidden">
         <MessageReadingPane summary={selectedSummary} />
       </div>
       <ComposeModal />

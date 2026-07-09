@@ -55,23 +55,20 @@ export default function AccountEditorModal({
       }}
     >
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/30" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-6 shadow-xl dark:bg-neutral-800">
+        <Dialog.Overlay className="fixed inset-0 bg-black/20 backdrop-blur-sm" />
+        <Dialog.Content className="glass-panel fixed left-1/2 top-1/2 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 p-6">
           <Dialog.Title className="mb-4 text-lg font-semibold">Add account</Dialog.Title>
 
           {createdId ? (
             <div className="space-y-3 text-sm">
               <p className="font-medium text-green-600">Account added.</p>
-              <button
-                onClick={() => onOpenChange(false)}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-              >
+              <button onClick={() => onOpenChange(false)} className="glass-button-primary">
                 Done
               </button>
             </div>
           ) : (
             <>
-              <div className="mb-4 flex gap-2 border-b border-gray-100 dark:border-neutral-700">
+              <div className="mb-4 flex gap-2 border-b border-white/40 dark:border-white/10">
                 <button
                   onClick={() => setTab("basic")}
                   className={`px-3 py-2 text-sm ${tab === "basic" ? "border-b-2 border-indigo-600 font-medium" : "text-gray-500"}`}
@@ -98,7 +95,7 @@ export default function AccountEditorModal({
                       type="color"
                       value={form.color}
                       onChange={(e) => update("color", e.target.value)}
-                      className="h-8 w-14 rounded border border-gray-200 dark:border-neutral-600"
+                      className="h-8 w-14 rounded-lg border border-white/60 bg-white/40 dark:border-white/10"
                     />
                   </Field>
                   <p className="pt-2 font-medium text-gray-500">IMAP (receiving)</p>
@@ -161,16 +158,13 @@ export default function AccountEditorModal({
                   )}
 
                   <div className="flex justify-end gap-2 pt-2">
-                    <button
-                      onClick={() => onOpenChange(false)}
-                      className="rounded-lg px-4 py-2 text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-neutral-700"
-                    >
+                    <button onClick={() => onOpenChange(false)} className="glass-button">
                       Cancel
                     </button>
                     <button
                       onClick={handleCreate}
                       disabled={createAccount.isPending || !form.name || !form.imap_host}
-                      className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                      className="glass-button-primary"
                     >
                       {createAccount.isPending ? "Saving..." : "Save account"}
                     </button>

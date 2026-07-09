@@ -30,7 +30,7 @@ export default function MessageListItem({
       }}
       style={{ borderLeftColor: message.account_color }}
       className={`flex w-full cursor-pointer items-start gap-3 border-l-4 px-4 py-3 text-left transition-colors ${
-        selected ? "bg-indigo-50 dark:bg-neutral-700" : "hover:bg-gray-50 dark:hover:bg-neutral-800"
+        selected ? "bg-indigo-500/15 dark:bg-indigo-400/10" : "hover:bg-white/50 dark:hover:bg-white/5"
       }`}
     >
       <button
