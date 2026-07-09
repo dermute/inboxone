@@ -15,7 +15,7 @@ function FolderPicker({ account }: { account: Account }) {
   const { data: folders } = useAccountFolders(account.id);
   const updateFolders = useUpdateAccountFolders(account.id);
 
-  if (!folders) return <p className="text-sm text-gray-400">Loading folders...</p>;
+  if (!folders) return <p className="text-sm text-gray-500 dark:text-gray-400">Loading folders...</p>;
 
   function toggle(path: string, enabled: boolean) {
     const next = folders!.map((f) => ({
@@ -52,13 +52,13 @@ function AccountRow({ account }: { account: Account }) {
         <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: account.color }} />
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium">{account.name}</div>
-          <div className="truncate text-xs text-gray-400">
+          <div className="truncate text-xs text-gray-500 dark:text-gray-400">
             {account.protocol === "oauth_microsoft" ? "Outlook / Microsoft 365" : account.imap_host}
           </div>
         </div>
         {account.last_sync_status && (
           <span
-            className={`text-xs ${account.last_sync_status === "error" ? "text-red-500" : "text-gray-400"}`}
+            className={`text-xs ${account.last_sync_status === "error" ? "font-medium text-red-600 dark:text-red-400" : "text-gray-500 dark:text-gray-400"}`}
             title={account.last_sync_error ?? undefined}
           >
             {account.last_sync_status === "error" ? "sync error" : "synced"}
@@ -74,25 +74,33 @@ function AccountRow({ account }: { account: Account }) {
           onClick={() => {
             if (confirm(`Remove account "${account.name}"?`)) deleteAccount.mutate(account.id);
           }}
-          className="rounded-full border border-red-300/50 bg-red-50/40 px-3 py-1 text-xs text-red-600 backdrop-blur-md transition hover:bg-red-100/60 dark:border-red-400/20 dark:bg-red-400/10 dark:hover:bg-red-400/20"
+          className="rounded-full border border-red-200 bg-red-50/90 px-3 py-1 text-xs font-medium text-red-700 backdrop-blur-md transition hover:bg-red-100 dark:border-red-400/30 dark:bg-red-400/15 dark:text-red-300 dark:hover:bg-red-400/25"
         >
           Remove
         </button>
       </div>
       {testConnection.data && testConnection.variables === account.id && (
-        <div className="border-t border-white/40 px-4 py-2 text-xs dark:border-white/10">
-          <span className={testConnection.data.imap_ok ? "text-green-600" : "text-red-600"}>
+        <div className="glass-divider border-t px-4 py-2 text-xs">
+          <span
+            className={
+              testConnection.data.imap_ok
+                ? "text-green-700 dark:text-green-400"
+                : "text-red-600 dark:text-red-400"
+            }
+          >
             IMAP: {testConnection.data.imap_ok ? "OK" : testConnection.data.imap_error}
           </span>
           {testConnection.data.smtp_ok !== null && (
-            <span className={`ml-4 ${testConnection.data.smtp_ok ? "text-green-600" : "text-red-600"}`}>
+            <span
+              className={`ml-4 ${testConnection.data.smtp_ok ? "text-green-700 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+            >
               SMTP: {testConnection.data.smtp_ok ? "OK" : testConnection.data.smtp_error}
             </span>
           )}
         </div>
       )}
       {expanded && (
-        <div className="border-t border-white/40 px-4 py-3 dark:border-white/10">
+        <div className="glass-divider border-t px-4 py-3">
           <FolderPicker account={account} />
         </div>
       )}
@@ -108,7 +116,10 @@ export default function SettingsAccountsPage() {
     <div className="mx-auto max-w-2xl px-6 py-8">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <Link to="/inbox" className="text-sm text-gray-500 hover:underline">
+          <Link
+            to="/inbox"
+            className="text-sm text-gray-600 hover:text-gray-900 hover:underline dark:text-gray-400 dark:hover:text-white"
+          >
             &larr; Back to inbox
           </Link>
           <h1 className="mt-1 text-xl font-semibold">Accounts</h1>
@@ -118,7 +129,7 @@ export default function SettingsAccountsPage() {
         </button>
       </div>
 
-      {isLoading && <p className="text-sm text-gray-400">Loading...</p>}
+      {isLoading && <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>}
 
       <div className="space-y-3">
         {accounts?.map((account) => (

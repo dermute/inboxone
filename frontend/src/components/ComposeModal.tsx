@@ -59,14 +59,16 @@ export default function ComposeModal() {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/20 backdrop-blur-sm" />
         <Dialog.Content className="glass-panel fixed left-1/2 top-1/2 flex h-[80vh] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden">
-          <div className="flex items-center justify-between border-b border-white/40 px-5 py-3 dark:border-white/10">
+          <div className="glass-divider flex items-center justify-between border-b px-5 py-3">
             <Dialog.Title className="font-medium">New message</Dialog.Title>
-            <Dialog.Close className="text-gray-400 hover:text-gray-600">✕</Dialog.Close>
+            <Dialog.Close className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+              ✕
+            </Dialog.Close>
           </div>
 
           <div className="space-y-2 px-5 py-3">
             <div className="flex items-center gap-2 text-sm">
-              <span className="w-16 text-gray-500">From</span>
+              <span className="w-16 text-gray-600 dark:text-gray-400">From</span>
               <select
                 value={accountId ?? ""}
                 onChange={(e) => setAccountId(Number(e.target.value))}
@@ -80,15 +82,15 @@ export default function ComposeModal() {
               </select>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <span className="w-16 text-gray-500">To</span>
+              <span className="w-16 text-gray-600 dark:text-gray-400">To</span>
               <input value={to} onChange={(e) => setTo(e.target.value)} className="input flex-1" />
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <span className="w-16 text-gray-500">Cc</span>
+              <span className="w-16 text-gray-600 dark:text-gray-400">Cc</span>
               <input value={cc} onChange={(e) => setCc(e.target.value)} className="input flex-1" />
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <span className="w-16 text-gray-500">Subject</span>
+              <span className="w-16 text-gray-600 dark:text-gray-400">Subject</span>
               <input
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
@@ -97,11 +99,11 @@ export default function ComposeModal() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto border-t border-white/40 px-5 py-3 dark:border-white/10">
+          <div className="flex-1 overflow-y-auto glass-divider border-t px-5 py-3">
             <EditorContent editor={editor} className="prose prose-sm max-w-none dark:prose-invert" />
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-white/40 px-5 py-3 dark:border-white/10">
+          <div className="flex justify-end gap-2 glass-divider border-t px-5 py-3">
             <button onClick={closeCompose} className="glass-button">
               Cancel
             </button>

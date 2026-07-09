@@ -25,7 +25,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center p-6">
       <form onSubmit={handleSubmit} className="glass-panel w-full max-w-sm p-8">
         <h1 className="mb-1 text-2xl font-semibold">inboxone</h1>
-        <p className="mb-6 text-sm text-gray-500 dark:text-gray-400">
+        <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
           Enter the app password to continue.
         </p>
         <input

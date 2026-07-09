@@ -30,7 +30,7 @@ export default function MessageListItem({
       }}
       style={{ borderLeftColor: message.account_color }}
       className={`flex w-full cursor-pointer items-start gap-3 border-l-4 px-4 py-3 text-left transition-colors ${
-        selected ? "bg-indigo-500/15 dark:bg-indigo-400/10" : "hover:bg-white/50 dark:hover:bg-white/5"
+        selected ? "bg-indigo-500/10 dark:bg-indigo-400/15" : "glass-hover"
       }`}
     >
       <button
@@ -62,17 +62,19 @@ export default function MessageListItem({
           >
             {message.from_name || message.from_addr || "(unknown sender)"}
           </span>
-          <span className="shrink-0 text-xs text-gray-400">{formatDate(message.date_sent)}</span>
+          <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">
+            {formatDate(message.date_sent)}
+          </span>
         </div>
         <div
-          className={`truncate text-sm ${message.is_seen ? "text-gray-500" : "font-medium text-gray-900 dark:text-white"}`}
+          className={`truncate text-sm ${message.is_seen ? "text-gray-600 dark:text-gray-400" : "font-medium text-gray-900 dark:text-white"}`}
         >
           {message.subject || "(no subject)"}
         </div>
-        <div className="truncate text-xs text-gray-400">{message.snippet}</div>
+        <div className="truncate text-xs text-gray-500 dark:text-gray-400">{message.snippet}</div>
       </div>
       {message.has_attachments && (
-        <span className="mt-1 shrink-0 text-gray-400" title="Has attachments">
+        <span className="mt-1 shrink-0 text-gray-500 dark:text-gray-400" title="Has attachments">
           📎
         </span>
       )}

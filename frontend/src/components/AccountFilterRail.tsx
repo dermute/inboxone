@@ -37,8 +37,8 @@ export default function AccountFilterRail({
           onClick={() => onSelect(null)}
           className={`mb-1 flex w-full items-center rounded-2xl px-3 py-2 text-sm transition-colors ${
             selectedAccountId === null
-              ? "bg-indigo-500/15 font-medium text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-300"
-              : "text-gray-700 hover:bg-white/50 dark:text-gray-300 dark:hover:bg-white/5"
+              ? "glass-selected font-medium"
+              : "text-gray-700 glass-hover dark:text-gray-300"
           }`}
         >
           All inboxes
@@ -51,8 +51,8 @@ export default function AccountFilterRail({
               <div
                 className={`flex w-full items-center gap-1 rounded-2xl pr-2 text-sm transition-colors ${
                   selectedAccountId === account.id && selectedFolderId === null
-                    ? "bg-indigo-500/15 font-medium text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-300"
-                    : "text-gray-700 hover:bg-white/50 dark:text-gray-300 dark:hover:bg-white/5"
+                    ? "glass-selected font-medium"
+                    : "text-gray-700 glass-hover dark:text-gray-300"
                 }`}
               >
                 <button
@@ -60,7 +60,7 @@ export default function AccountFilterRail({
                     setExpanded((e) => ({ ...e, [account.id]: !e[account.id] }))
                   }
                   title={isExpanded ? "Collapse folders" : "Expand folders"}
-                  className="shrink-0 rounded-full p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                  className="shrink-0 rounded-full p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
                   <span
                     className={`inline-block text-xs transition-transform ${isExpanded ? "rotate-90" : ""}`}
@@ -79,7 +79,10 @@ export default function AccountFilterRail({
                   <span className="truncate">{account.name}</span>
                 </button>
                 {account.last_sync_status === "error" ? (
-                  <span title={account.last_sync_error ?? "Sync error"} className="shrink-0 text-red-500">
+                  <span
+                    title={account.last_sync_error ?? "Sync error"}
+                    className="shrink-0 font-bold text-red-600 dark:text-red-400"
+                  >
                     !
                   </span>
                 ) : (
@@ -94,8 +97,8 @@ export default function AccountFilterRail({
                       onClick={() => onSelectFolder(account.id, folder.id)}
                       className={`flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition-colors ${
                         selectedFolderId === folder.id
-                          ? "bg-indigo-500/15 font-medium text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-300"
-                          : "text-gray-600 hover:bg-white/50 dark:text-gray-400 dark:hover:bg-white/5"
+                          ? "glass-selected font-medium"
+                          : "text-gray-600 glass-hover dark:text-gray-400"
                       }`}
                     >
                       <span className="truncate">{folder.display_name || folder.imap_path}</span>
@@ -103,7 +106,7 @@ export default function AccountFilterRail({
                     </button>
                   ))}
                   {account.folders.length === 0 && (
-                    <p className="px-3 py-1 text-xs text-gray-400">No folders synced</p>
+                    <p className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400">No folders synced</p>
                   )}
                 </div>
               )}
@@ -111,10 +114,10 @@ export default function AccountFilterRail({
           );
         })}
       </nav>
-      <div className="border-t border-white/40 p-2 dark:border-white/10">
+      <div className="glass-divider border-t p-2">
         <Link
           to="/settings/accounts"
-          className="block rounded-2xl px-3 py-2 text-sm text-gray-600 hover:bg-white/50 dark:text-gray-300 dark:hover:bg-white/5"
+          className="glass-hover block rounded-2xl px-3 py-2 text-sm text-gray-600 dark:text-gray-300"
         >
           Settings
         </Link>

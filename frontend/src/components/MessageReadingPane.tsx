@@ -23,21 +23,25 @@ export default function MessageReadingPane({ summary }: { summary: MessageSummar
 
   if (!summary) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-gray-400">
+      <div className="flex h-full items-center justify-center text-sm text-gray-500 dark:text-gray-400">
         Select a message to read it
       </div>
     );
   }
 
   if (isLoading || !detail) {
-    return <div className="flex h-full items-center justify-center text-sm text-gray-400">Loading...</div>;
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+        Loading...
+      </div>
+    );
   }
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-white/40 px-6 py-4 dark:border-white/10">
+      <div className="border-b glass-divider px-6 py-4">
         <h2 className="text-lg font-semibold">{detail.subject || "(no subject)"}</h2>
-        <div className="mt-1 flex items-center gap-2 text-sm text-gray-500">
+        <div className="mt-1 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <span
             className="h-2 w-2 rounded-full"
             style={{ backgroundColor: summary.account_color }}
@@ -48,7 +52,9 @@ export default function MessageReadingPane({ summary }: { summary: MessageSummar
           <span>&middot;</span>
           <span>{detail.date_sent ? new Date(detail.date_sent).toLocaleString() : ""}</span>
         </div>
-        <div className="mt-1 text-xs text-gray-400">To: {detail.to_addrs.join(", ")}</div>
+        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          To: {detail.to_addrs.join(", ")}
+        </div>
       </div>
 
       <div className="flex-1 overflow-hidden">
@@ -56,7 +62,7 @@ export default function MessageReadingPane({ summary }: { summary: MessageSummar
       </div>
 
       {detail.attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2 border-t border-white/40 px-6 py-3 dark:border-white/10">
+        <div className="flex flex-wrap gap-2 glass-divider border-t px-6 py-3">
           {detail.attachments.map((a) => (
             <a
               key={a.part_index}
@@ -70,7 +76,7 @@ export default function MessageReadingPane({ summary }: { summary: MessageSummar
         </div>
       )}
 
-      <div className="border-t border-white/40 px-6 py-3 dark:border-white/10">
+      <div className="glass-divider border-t px-6 py-3">
         <button
           onClick={() =>
             openReply({

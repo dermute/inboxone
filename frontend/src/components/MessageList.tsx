@@ -43,21 +43,21 @@ export default function MessageList({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-end border-b border-white/40 px-4 py-2 dark:border-white/10">
+      <div className="glass-divider flex shrink-0 items-center justify-end border-b px-4 py-2">
         <button
           onClick={onMarkAllRead}
           disabled={!hasUnread || markAllPending}
-          className="text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:cursor-default disabled:text-gray-300 dark:text-indigo-400 dark:disabled:text-neutral-600"
+          className="text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:cursor-default disabled:text-gray-400 dark:text-indigo-400 dark:hover:text-indigo-300 dark:disabled:text-gray-600"
         >
           Mark all as read
         </button>
       </div>
       {!isLoading && messages.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center text-sm text-gray-400">
+        <div className="flex flex-1 items-center justify-center px-8 text-center text-sm text-gray-500 dark:text-gray-400">
           No messages yet - accounts sync automatically in the background.
         </div>
       ) : (
-        <div className="flex-1 divide-y divide-white/40 overflow-y-auto dark:divide-white/5">
+        <div className="flex-1 divide-y divide-black/[0.06] overflow-y-auto dark:divide-white/10">
           {messages.map((m) => (
             <MessageListItem
               key={m.id}

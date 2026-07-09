@@ -61,23 +61,23 @@ export default function AccountEditorModal({
 
           {createdId ? (
             <div className="space-y-3 text-sm">
-              <p className="font-medium text-green-600">Account added.</p>
+              <p className="font-medium text-green-700 dark:text-green-400">Account added.</p>
               <button onClick={() => onOpenChange(false)} className="glass-button-primary">
                 Done
               </button>
             </div>
           ) : (
             <>
-              <div className="mb-4 flex gap-2 border-b border-white/40 dark:border-white/10">
+              <div className="glass-divider mb-4 flex gap-2 border-b">
                 <button
                   onClick={() => setTab("basic")}
-                  className={`px-3 py-2 text-sm ${tab === "basic" ? "border-b-2 border-indigo-600 font-medium" : "text-gray-500"}`}
+                  className={`px-3 py-2 text-sm ${tab === "basic" ? "border-b-2 border-indigo-600 font-medium text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"}`}
                 >
                   Generic IMAP/SMTP
                 </button>
                 <button
                   onClick={() => setTab("microsoft")}
-                  className={`px-3 py-2 text-sm ${tab === "microsoft" ? "border-b-2 border-indigo-600 font-medium" : "text-gray-500"}`}
+                  className={`px-3 py-2 text-sm ${tab === "microsoft" ? "border-b-2 border-indigo-600 font-medium text-gray-900 dark:text-white" : "text-gray-600 dark:text-gray-400"}`}
                 >
                   Outlook / Microsoft 365
                 </button>
@@ -95,10 +95,10 @@ export default function AccountEditorModal({
                       type="color"
                       value={form.color}
                       onChange={(e) => update("color", e.target.value)}
-                      className="h-8 w-14 rounded-lg border border-white/60 bg-white/40 dark:border-white/10"
+                      className="h-8 w-14 rounded-lg border border-black/10 bg-white/70 dark:border-white/10 dark:bg-white/10"
                     />
                   </Field>
-                  <p className="pt-2 font-medium text-gray-500">IMAP (receiving)</p>
+                  <p className="pt-2 font-medium text-gray-600 dark:text-gray-400">IMAP (receiving)</p>
                   <Field label="Host">
                     <input value={form.imap_host} onChange={(e) => update("imap_host", e.target.value)} className="input" />
                   </Field>
@@ -125,7 +125,7 @@ export default function AccountEditorModal({
                       className="input"
                     />
                   </Field>
-                  <p className="pt-2 font-medium text-gray-500">SMTP (sending)</p>
+                  <p className="pt-2 font-medium text-gray-600 dark:text-gray-400">SMTP (sending)</p>
                   <Field label="Host">
                     <input value={form.smtp_host} onChange={(e) => update("smtp_host", e.target.value)} className="input" />
                   </Field>
@@ -182,7 +182,7 @@ export default function AccountEditorModal({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="w-24 shrink-0 text-gray-500">{label}</span>
+      <span className="w-24 shrink-0 text-gray-600 dark:text-gray-400">{label}</span>
       <div className="flex-1">{children}</div>
     </div>
   );
