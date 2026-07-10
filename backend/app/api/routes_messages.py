@@ -6,7 +6,7 @@ import json
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlalchemy import select, tuple_
+from sqlalchemy import delete, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -254,6 +254,39 @@ async def update_flags(
         to_addrs=json.loads(message.to_addrs or "[]"),
         cc_addrs=json.loads(message.cc_addrs or "[]"),
     )
+
+
+@router.delete("/{message_id}")
+async def delete_message(message_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+    result = await db.execute(
+        select(Message)
+        .where(Message.id == message_id)
+        .options(selectinload(Message.account), selectinload(Message.folder))
+    )
+    message = result.scalar_one_or_none()
+    if message is None:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    account = message.account
+    with activity.track(f"Deleting message from {account.name}..."):
+        client = await open_imap_connection(db, account)
+        try:
+            trash_path = await asyncio.to_thread(imap_client.find_trash_folder, client)
+            if trash_path is None:
+                raise HTTPException(
+                    status_code=422, detail="Could not find a Trash folder on this account"
+                )
+            if message.folder.imap_path == trash_path:
+                raise HTTPException(status_code=400, detail="Message is already in Trash")
+            await asyncio.to_thread(
+                imap_client.move_to_trash, client, message.folder.imap_path, message.uid, trash_path
+            )
+        finally:
+            await asyncio.to_thread(client.logout)
+
+    await db.execute(delete(Message).where(Message.id == message_id))
+    await db.commit()
+    return {"deleted": True}
 
 
 @router.post("/{message_id}/reply")

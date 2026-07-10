@@ -11,7 +11,13 @@ function buildQuotedHtml(detail: { from_name: string | null; from_addr: string |
   return `<p>On ${when}, ${who} wrote:</p><blockquote style="border-left:2px solid #ccc;padding-left:10px;margin-left:0;color:#555;">${body}</blockquote>`;
 }
 
-export default function MessageReadingPane({ summary }: { summary: MessageSummary | null }) {
+export default function MessageReadingPane({
+  summary,
+  onDelete,
+}: {
+  summary: MessageSummary | null;
+  onDelete: (id: number) => void;
+}) {
   const { data: detail, isLoading } = useMessage(summary?.id ?? null);
   const openReply = useUiStore((s) => s.openReply);
 
@@ -76,7 +82,7 @@ export default function MessageReadingPane({ summary }: { summary: MessageSummar
         </div>
       )}
 
-      <div className="glass-divider border-t px-6 py-3">
+      <div className="glass-divider flex items-center justify-between border-t px-6 py-3">
         <button
           onClick={() =>
             openReply({
@@ -92,6 +98,12 @@ export default function MessageReadingPane({ summary }: { summary: MessageSummar
           className="glass-button-primary"
         >
           Reply
+        </button>
+        <button
+          onClick={() => onDelete(summary.id)}
+          className="rounded-full border border-red-200 bg-red-50/90 px-4 py-2 text-sm font-medium text-red-700 backdrop-blur-md transition hover:bg-red-100 dark:border-red-400/30 dark:bg-red-400/15 dark:text-red-300 dark:hover:bg-red-400/25"
+        >
+          Delete
         </button>
       </div>
     </div>

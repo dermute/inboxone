@@ -61,6 +61,14 @@ export function useMarkAllRead() {
   });
 }
 
+export function useDeleteMessage() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.delete(`/api/messages/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["messages"] }),
+  });
+}
+
 export function useReply() {
   const queryClient = useQueryClient();
   return useMutation({

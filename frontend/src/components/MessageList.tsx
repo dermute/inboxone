@@ -13,6 +13,7 @@ export default function MessageList({
   onMarkRead,
   onMarkAllRead,
   markAllPending,
+  onDelete,
 }: {
   messages: MessageSummary[];
   selectedId: number | null;
@@ -23,6 +24,7 @@ export default function MessageList({
   onMarkRead: (id: number) => void;
   onMarkAllRead: () => void;
   markAllPending: boolean;
+  onDelete: (id: number) => void;
 }) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -65,6 +67,7 @@ export default function MessageList({
               selected={m.id === selectedId}
               onClick={() => onSelect(m.id)}
               onMarkRead={() => onMarkRead(m.id)}
+              onDelete={() => onDelete(m.id)}
             />
           ))}
           <div ref={sentinelRef} className="h-4" />

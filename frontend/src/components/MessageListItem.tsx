@@ -14,11 +14,13 @@ export default function MessageListItem({
   selected,
   onClick,
   onMarkRead,
+  onDelete,
 }: {
   message: MessageSummary;
   selected: boolean;
   onClick: () => void;
   onMarkRead: () => void;
+  onDelete: () => void;
 }) {
   return (
     <div
@@ -28,7 +30,7 @@ export default function MessageListItem({
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") onClick();
       }}
-      className={`flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors ${
+      className={`group flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors ${
         selected ? "bg-indigo-500/10 dark:bg-indigo-400/15" : "glass-hover"
       }`}
     >
@@ -77,6 +79,16 @@ export default function MessageListItem({
           📎
         </span>
       )}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete();
+        }}
+        title="Delete"
+        className="mt-1 shrink-0 rounded p-1 text-gray-400 opacity-0 transition-opacity hover:text-red-600 focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 dark:text-gray-500 dark:hover:text-red-400"
+      >
+        🗑️
+      </button>
     </div>
   );
 }

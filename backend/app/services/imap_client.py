@@ -82,6 +82,21 @@ def mark_seen(client: IMAPClient, path: str, uids: list[int]) -> None:
     client.add_flags(uids, [b"\\Seen"])
 
 
+def find_trash_folder(client: IMAPClient) -> str | None:
+    # IMAPClient checks the SPECIAL-USE \Trash attribute first, falling back to
+    # common names ("Trash", "Deleted Items", ...) if the server doesn't advertise it.
+    return client.find_special_folder(b"\\Trash")
+
+
+def move_to_trash(client: IMAPClient, source_path: str, uid: int, trash_path: str) -> None:
+    # COPY + STORE \Deleted + EXPUNGE rather than the MOVE extension (RFC 6851) -
+    # not every IMAP server supports MOVE, but these three are baseline IMAP4rev1.
+    client.select_folder(source_path, readonly=False)
+    client.copy([uid], trash_path)
+    client.delete_messages([uid])
+    client.expunge()
+
+
 def fetch_full_message(client: IMAPClient, path: str, uid: int, mark_seen: bool = True) -> bytes:
     client.select_folder(path, readonly=not mark_seen)
     item = "BODY[]" if mark_seen else "BODY.PEEK[]"
