@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import type { Account } from "../api/types";
+import NotificationToggle from "./NotificationToggle";
 import ThemeToggle from "./ThemeToggle";
 
 function UnreadBadge({ count }: { count: number }) {
@@ -116,7 +117,14 @@ export default function AccountFilterRail({
         })}
       </nav>
       <div className="glass-divider space-y-2 border-t p-2">
-        <ThemeToggle />
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <ThemeToggle />
+          </div>
+          <div className="flex-1">
+            <NotificationToggle />
+          </div>
+        </div>
         <Link
           to="/settings/accounts"
           className="glass-hover block rounded-2xl px-3 py-2 text-sm text-gray-600 dark:text-gray-300"

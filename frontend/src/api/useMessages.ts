@@ -29,6 +29,16 @@ export function useMessages(filters: MessageFilters) {
   });
 }
 
+// Unfiltered across every account, newest-first - used by the new-mail notifier to
+// spot newly-arrived unread messages regardless of which account/folder is on screen.
+export function useRecentUnread() {
+  return useQuery({
+    queryKey: ["messages", "recent-unread"],
+    queryFn: () => api.get<MessageListPage>("/api/messages?unread_only=true&limit=20"),
+    refetchInterval: 20_000,
+  });
+}
+
 export function useMessage(id: number | null) {
   return useQuery({
     queryKey: ["messages", "detail", id],
