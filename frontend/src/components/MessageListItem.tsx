@@ -19,7 +19,7 @@ export default function MessageListItem({
   message: MessageSummary;
   selected: boolean;
   onClick: () => void;
-  onMarkRead: () => void;
+  onMarkRead: (seen: boolean) => void;
   onDelete: () => void;
 }) {
   return (
@@ -37,19 +37,12 @@ export default function MessageListItem({
       <button
         onClick={(e) => {
           e.stopPropagation();
-          onMarkRead();
+          onMarkRead(!message.is_seen);
         }}
-        disabled={message.is_seen}
-        title={message.is_seen ? "Already read" : "Mark as read"}
-        className="mt-1.5 shrink-0 p-0.5 disabled:cursor-default"
+        title={message.is_seen ? "Mark as unread" : "Mark as read"}
+        className="mt-1 shrink-0 rounded p-1 text-gray-400 opacity-0 transition-opacity hover:text-indigo-600 focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 dark:text-gray-500 dark:hover:text-indigo-400"
       >
-        <span
-          className={`block h-2.5 w-2.5 rounded-full border-2 ${
-            message.is_seen
-              ? "border-transparent bg-transparent"
-              : "border-indigo-500 bg-indigo-500 hover:bg-indigo-600"
-          }`}
-        />
+        ✉️
       </button>
       <span
         className="mt-1.5 h-2 w-2 shrink-0 rounded-full"

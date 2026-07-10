@@ -21,7 +21,7 @@ export default function MessageList({
   onLoadMore: () => void;
   hasMore: boolean;
   isLoading: boolean;
-  onMarkRead: (id: number) => void;
+  onMarkRead: (id: number, seen: boolean) => void;
   onMarkAllRead: () => void;
   markAllPending: boolean;
   onDelete: (id: number) => void;
@@ -66,7 +66,7 @@ export default function MessageList({
               message={m}
               selected={m.id === selectedId}
               onClick={() => onSelect(m.id)}
-              onMarkRead={() => onMarkRead(m.id)}
+              onMarkRead={(seen) => onMarkRead(m.id, seen)}
               onDelete={() => onDelete(m.id)}
             />
           ))}

@@ -64,7 +64,7 @@ export default function InboxPage() {
           onLoadMore={() => messagesQuery.fetchNextPage()}
           hasMore={!!messagesQuery.hasNextPage}
           isLoading={messagesQuery.isLoading}
-          onMarkRead={(id) => updateFlags.mutate({ id, seen: true })}
+          onMarkRead={(id, seen) => updateFlags.mutate({ id, seen })}
           onMarkAllRead={() =>
             markAllRead.mutate({ accountId: selectedAccountId, folderId: selectedFolderId })
           }
