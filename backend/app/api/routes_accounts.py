@@ -3,6 +3,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only, selectinload
 
+from app.core import activity
 from app.core.security import require_session
 from app.db.models import Account, Folder, Message, Protocol
 from app.db.session import get_db
@@ -162,27 +163,28 @@ async def delete_account(account_id: int, db: AsyncSession = Depends(get_db)) ->
 async def test_connection(account_id: int, db: AsyncSession = Depends(get_db)) -> TestConnectionResult:
     account = await _get_account_or_404(db, account_id)
 
-    imap_ok, imap_error = True, None
-    try:
-        client = await open_imap_connection(db, account)
-        client.logout()
-    except Exception as exc:  # noqa: BLE001 - surfaced to the caller, not swallowed silently
-        imap_ok, imap_error = False, str(exc)
+    with activity.track(f"Testing {account.name}..."):
+        imap_ok, imap_error = True, None
+        try:
+            client = await open_imap_connection(db, account)
+            client.logout()
+        except Exception as exc:  # noqa: BLE001 - surfaced to the caller, not swallowed silently
+            imap_ok, imap_error = False, str(exc)
 
-    if account.protocol != Protocol.IMAP_BASIC.value:
-        return TestConnectionResult(imap_ok=imap_ok, imap_error=imap_error)
+        if account.protocol != Protocol.IMAP_BASIC.value:
+            return TestConnectionResult(imap_ok=imap_ok, imap_error=imap_error)
 
-    smtp_ok, smtp_error = True, None
-    try:
-        await smtp_client.test_smtp_connection(
-            host=account.smtp_host,
-            port=account.smtp_port,
-            use_tls=account.smtp_use_tls,
-            username=account.smtp_username,
-            password=account.smtp_password_enc,
-        )
-    except Exception as exc:  # noqa: BLE001
-        smtp_ok, smtp_error = False, str(exc)
+        smtp_ok, smtp_error = True, None
+        try:
+            await smtp_client.test_smtp_connection(
+                host=account.smtp_host,
+                port=account.smtp_port,
+                use_tls=account.smtp_use_tls,
+                username=account.smtp_username,
+                password=account.smtp_password_enc,
+            )
+        except Exception as exc:  # noqa: BLE001
+            smtp_ok, smtp_error = False, str(exc)
 
     return TestConnectionResult(
         imap_ok=imap_ok, imap_error=imap_error, smtp_ok=smtp_ok, smtp_error=smtp_error
@@ -192,13 +194,14 @@ async def test_connection(account_id: int, db: AsyncSession = Depends(get_db)) -
 @router.get("/{account_id}/folders", response_model=list[FolderOut])
 async def list_account_folders(account_id: int, db: AsyncSession = Depends(get_db)) -> list[Folder]:
     account = await _get_account_or_404(db, account_id)
-    client = await open_imap_connection(db, account)
-    try:
-        import asyncio
+    with activity.track(f"Listing folders for {account.name}..."):
+        client = await open_imap_connection(db, account)
+        try:
+            import asyncio
 
-        remote_paths = await asyncio.to_thread(imap_client.list_folders, client)
-    finally:
-        client.logout()
+            remote_paths = await asyncio.to_thread(imap_client.list_folders, client)
+        finally:
+            client.logout()
 
     existing = {f.imap_path: f for f in account.folders}
     changed = False

@@ -10,6 +10,7 @@ from sqlalchemy import select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core import activity
 from app.core.security import require_session
 from app.db.models import Account, Message, Protocol
 from app.db.session import get_db
@@ -115,21 +116,22 @@ async def mark_all_read(
         for m in account_messages:
             by_folder.setdefault(m.folder.imap_path, []).append(m)
 
-        try:
-            client = await open_imap_connection(db, account)
-        except Exception:  # noqa: BLE001 - one unreachable account shouldn't block the rest
-            continue
-        try:
-            for path, folder_messages in by_folder.items():
-                uids = [m.uid for m in folder_messages]
-                await asyncio.to_thread(imap_client.mark_seen, client, path, uids)
-                for m in folder_messages:
-                    m.is_seen = True
-                    updated += 1
-        except Exception:  # noqa: BLE001 - keep whatever folders already succeeded
-            pass
-        finally:
-            await asyncio.to_thread(client.logout)
+        with activity.track(f"Marking {account.name} as read..."):
+            try:
+                client = await open_imap_connection(db, account)
+            except Exception:  # noqa: BLE001 - one unreachable account shouldn't block the rest
+                continue
+            try:
+                for path, folder_messages in by_folder.items():
+                    uids = [m.uid for m in folder_messages]
+                    await asyncio.to_thread(imap_client.mark_seen, client, path, uids)
+                    for m in folder_messages:
+                        m.is_seen = True
+                        updated += 1
+            except Exception:  # noqa: BLE001 - keep whatever folders already succeeded
+                pass
+            finally:
+                await asyncio.to_thread(client.logout)
 
     await db.commit()
     return {"updated": updated}
@@ -137,13 +139,14 @@ async def mark_all_read(
 
 async def _fetch_and_parse(db: AsyncSession, message: Message, mark_seen: bool) -> dict:
     account = message.account
-    client = await open_imap_connection(db, account)
-    try:
-        raw = await asyncio.to_thread(
-            imap_client.fetch_full_message, client, message.folder.imap_path, message.uid, mark_seen
-        )
-    finally:
-        await asyncio.to_thread(client.logout)
+    with activity.track(f"Fetching message from {account.name}..."):
+        client = await open_imap_connection(db, account)
+        try:
+            raw = await asyncio.to_thread(
+                imap_client.fetch_full_message, client, message.folder.imap_path, message.uid, mark_seen
+            )
+        finally:
+            await asyncio.to_thread(client.logout)
     return mail_parser.parse_full_message(raw)
 
 
@@ -192,13 +195,14 @@ async def get_attachment(message_id: int, part_index: str, db: AsyncSession = De
         raise HTTPException(status_code=404, detail="Message not found")
 
     account = message.account
-    client = await open_imap_connection(db, account)
-    try:
-        raw = await asyncio.to_thread(
-            imap_client.fetch_full_message, client, message.folder.imap_path, message.uid, False
-        )
-    finally:
-        await asyncio.to_thread(client.logout)
+    with activity.track(f"Downloading attachment from {account.name}..."):
+        client = await open_imap_connection(db, account)
+        try:
+            raw = await asyncio.to_thread(
+                imap_client.fetch_full_message, client, message.folder.imap_path, message.uid, False
+            )
+        finally:
+            await asyncio.to_thread(client.logout)
 
     payload, content_type, filename = mail_parser.extract_attachment_bytes(raw, part_index)
     headers = {"Content-Disposition": f'attachment; filename="{filename or "attachment"}"'}
@@ -227,15 +231,16 @@ async def update_flags(
                 [message.uid], [b"\\Flagged"]
             )
 
-    client = await open_imap_connection(db, message.account)
-    try:
-        await asyncio.to_thread(_apply_flags)
-        if payload.seen is not None:
-            message.is_seen = payload.seen
-        if payload.flagged is not None:
-            message.is_flagged = payload.flagged
-    finally:
-        await asyncio.to_thread(client.logout)
+    with activity.track(f"Updating {message.account.name}..."):
+        client = await open_imap_connection(db, message.account)
+        try:
+            await asyncio.to_thread(_apply_flags)
+            if payload.seen is not None:
+                message.is_seen = payload.seen
+            if payload.flagged is not None:
+                message.is_flagged = payload.flagged
+        finally:
+            await asyncio.to_thread(client.logout)
 
     await db.commit()
     return MessageOut(
@@ -268,37 +273,38 @@ async def reply(message_id: int, payload: ReplyRequest, db: AsyncSession = Depen
     if account is None:
         raise HTTPException(status_code=404, detail="Send-as account not found")
 
-    if account.protocol == Protocol.OAUTH_MICROSOFT.value:
-        token = await get_graph_token(db, account)
-        await graph_client.send_mail(
-            access_token=token,
-            subject=payload.subject,
-            body_html=payload.body_html,
-            to=payload.to,
-            cc=payload.cc,
-            bcc=payload.bcc,
-            in_reply_to=original.message_id_header,
-            references=original.references,
-        )
-    else:
-        mime = mail_parser.build_reply_mime(
-            from_addr=account.smtp_username,
-            to=payload.to,
-            cc=payload.cc,
-            bcc=payload.bcc,
-            subject=payload.subject,
-            body_html=payload.body_html,
-            original_message_id=original.message_id_header,
-            original_references=original.references,
-        )
-        await smtp_client.send_basic_auth(
-            mime,
-            host=account.smtp_host,
-            port=account.smtp_port,
-            use_tls=account.smtp_use_tls,
-            username=account.smtp_username,
-            password=account.smtp_password_enc,
-        )
+    with activity.track(f"Sending from {account.name}..."):
+        if account.protocol == Protocol.OAUTH_MICROSOFT.value:
+            token = await get_graph_token(db, account)
+            await graph_client.send_mail(
+                access_token=token,
+                subject=payload.subject,
+                body_html=payload.body_html,
+                to=payload.to,
+                cc=payload.cc,
+                bcc=payload.bcc,
+                in_reply_to=original.message_id_header,
+                references=original.references,
+            )
+        else:
+            mime = mail_parser.build_reply_mime(
+                from_addr=account.smtp_username,
+                to=payload.to,
+                cc=payload.cc,
+                bcc=payload.bcc,
+                subject=payload.subject,
+                body_html=payload.body_html,
+                original_message_id=original.message_id_header,
+                original_references=original.references,
+            )
+            await smtp_client.send_basic_auth(
+                mime,
+                host=account.smtp_host,
+                port=account.smtp_port,
+                use_tls=account.smtp_use_tls,
+                username=account.smtp_username,
+                password=account.smtp_password_enc,
+            )
 
     original.is_answered = True
     await db.commit()

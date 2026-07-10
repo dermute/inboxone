@@ -8,6 +8,7 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core import activity
 from app.core.config import get_settings
 from app.db.models import Account, Folder, Message
 from app.db.session import async_session_factory
@@ -125,13 +126,14 @@ async def sync_account(account_id: int) -> None:
                 return
 
             try:
-                client = await open_imap_connection(db, account)
-                try:
-                    for folder in account.folders:
-                        if folder.sync_enabled:
-                            await _sync_folder(client, db, account, folder)
-                finally:
-                    await asyncio.to_thread(client.logout)
+                with activity.track(f"Syncing {account.name}..."):
+                    client = await open_imap_connection(db, account)
+                    try:
+                        for folder in account.folders:
+                            if folder.sync_enabled:
+                                await _sync_folder(client, db, account, folder)
+                    finally:
+                        await asyncio.to_thread(client.logout)
 
                 account.last_sync_status = "ok"
                 account.last_sync_error = None

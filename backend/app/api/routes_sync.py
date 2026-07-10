@@ -2,12 +2,18 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import activity
 from app.core.security import require_session
 from app.db.models import Account
 from app.db.session import get_db
 from app.sync.worker import sync_account
 
 router = APIRouter(prefix="/api/sync", tags=["sync"], dependencies=[Depends(require_session)])
+
+
+@router.get("/activity")
+async def get_activity() -> dict:
+    return {"items": activity.snapshot()}
 
 
 @router.post("/trigger")

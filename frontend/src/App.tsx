@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import { useAuth } from "./api/useAuth";
+import StatusBar from "./components/StatusBar";
 import InboxPage from "./pages/InboxPage";
 import LoginPage from "./pages/LoginPage";
 import SettingsAccountsPage from "./pages/SettingsAccountsPage";
@@ -9,7 +10,12 @@ function RequireAuth({ children }: { children: React.ReactElement }) {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) return null;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  return children;
+  return (
+    <>
+      {children}
+      <StatusBar />
+    </>
+  );
 }
 
 export default function App() {
