@@ -4,8 +4,18 @@ Uses MSAL's public-client device code flow so no redirect URI needs to be
 reachable from Microsoft's servers - this works for a container with no
 public HTTPS endpoint (localhost, LAN IP, behind a home network, etc).
 
-Both the IMAP scope and the Graph Mail.Send scope are acquired from the same
-underlying refresh token without a second user interaction.
+The IMAP scope and the Graph Mail.Send scope live under two different
+resource audiences (https://outlook.office.com and https://graph.microsoft.com
+respectively) - Azure AD's v2 endpoint rejects a single authorization request
+that combines scopes from two different resources with AADSTS70011
+("scopes ... are not compatible with each other"). So sign-in happens in two
+steps: the interactive device-code flow requests only the IMAP scope, then
+_drive_device_flow immediately tries to silently pick up a Graph token too
+using the same now-authenticated account - this normally succeeds without a
+second user interaction, since consenting to the app grants everything it's
+configured for, not just the scopes in that specific token request. If that
+silent step fails for some reason, the account still gets created with IMAP
+access; sending would surface its own clear error at send time.
 
 DEFAULT_CLIENT_ID is Microsoft's own first-party "Office" public client ID -
 the same well-known ID used by Thunderbird and several open-source IMAP/OAuth
@@ -20,11 +30,14 @@ tenant blocks third-party first-party-ID reuse by policy).
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 import uuid
 from dataclasses import dataclass, field
 
 import msal
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_CLIENT_ID = "9e5f94bc-e8a4-4e73-b8be-63364c29d753"
 
@@ -60,7 +73,9 @@ def _build_app(client_id: str, tenant: str, token_cache: msal.SerializableTokenC
 
 async def start_device_flow(client_id: str, tenant: str) -> dict:
     app = _build_app(client_id, tenant)
-    flow = await asyncio.to_thread(app.initiate_device_flow, scopes=IMAP_SCOPE + GRAPH_SCOPE)
+    # IMAP-only here - see module docstring for why the Graph scope can't be requested
+    # in the same call.
+    flow = await asyncio.to_thread(app.initiate_device_flow, scopes=IMAP_SCOPE)
     if "user_code" not in flow:
         raise RuntimeError(f"Failed to start device flow: {flow.get('error_description', flow)}")
 
@@ -86,9 +101,26 @@ async def _drive_device_flow(flow_id: str) -> None:
             state.status = "error"
             state.error = result.get("error_description", "Unknown error acquiring token")
             return
-        state.token_cache_serialized = state.app.token_cache.serialize()
+
         accounts = state.app.get_accounts()
-        state.username = accounts[0]["username"] if accounts else None
+        account = accounts[0] if accounts else None
+
+        if account is not None:
+            # Second resource, same already-consented account - see module docstring.
+            # Not fatal if this doesn't come back with a token: the account still gets
+            # created with working IMAP access either way.
+            graph_result = await asyncio.to_thread(
+                state.app.acquire_token_silent, GRAPH_SCOPE, account
+            )
+            if not graph_result or "access_token" not in graph_result:
+                logger.warning(
+                    "Could not silently acquire a Graph token after Microsoft sign-in "
+                    "(flow %s) - sending from this account may not work until reconnected",
+                    flow_id,
+                )
+
+        state.token_cache_serialized = state.app.token_cache.serialize()
+        state.username = account["username"] if account else None
         state.status = "complete"
     except Exception as exc:  # noqa: BLE001 - surfaced to the user via poll endpoint
         state.status = "error"
