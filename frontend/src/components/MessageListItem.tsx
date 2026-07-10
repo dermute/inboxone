@@ -28,8 +28,7 @@ export default function MessageListItem({
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") onClick();
       }}
-      style={{ borderLeftColor: message.account_color }}
-      className={`flex w-full cursor-pointer items-start gap-3 border-l-4 px-4 py-3 text-left transition-colors ${
+      className={`flex w-full cursor-pointer items-start gap-3 px-4 py-3 text-left transition-colors ${
         selected ? "bg-indigo-500/10 dark:bg-indigo-400/15" : "glass-hover"
       }`}
     >
