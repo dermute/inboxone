@@ -15,9 +15,11 @@ export interface Account {
   is_active: boolean;
   imap_host: string | null;
   imap_port: number | null;
+  imap_use_tls: boolean;
   imap_username: string | null;
   smtp_host: string | null;
   smtp_port: number | null;
+  smtp_use_tls: boolean;
   smtp_username: string | null;
   oauth_client_id: string | null;
   oauth_tenant: string | null;
@@ -41,6 +43,7 @@ export interface AccountCreateBasic {
   smtp_use_tls: boolean;
   smtp_username: string;
   smtp_password: string;
+  sync_interval_seconds?: number | null;
 }
 
 export interface TestConnectionResult {

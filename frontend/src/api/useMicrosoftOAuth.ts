@@ -16,17 +16,20 @@ interface PollResponse {
   account_id: number | null;
 }
 
-export function useMicrosoftOAuthFlow() {
+export function useMicrosoftOAuthFlow(reconnectAccountId?: number) {
   const [flowId, setFlowId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const start = useMutation({
     mutationFn: (payload: {
-      name: string;
-      color: string;
+      name?: string;
+      color?: string;
       client_id?: string;
-      tenant: string;
-    }) => api.post<StartResponse>("/api/accounts/oauth/microsoft/start", payload),
+      tenant?: string;
+    }) =>
+      reconnectAccountId
+        ? api.post<StartResponse>(`/api/accounts/oauth/microsoft/reconnect/${reconnectAccountId}`)
+        : api.post<StartResponse>("/api/accounts/oauth/microsoft/start", payload),
     onSuccess: (data) => setFlowId(data.flow_id),
   });
 

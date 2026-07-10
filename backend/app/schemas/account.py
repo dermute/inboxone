@@ -69,9 +69,11 @@ class AccountOut(BaseModel):
     is_active: bool
     imap_host: str | None
     imap_port: int | None
+    imap_use_tls: bool
     imap_username: str | None
     smtp_host: str | None
     smtp_port: int | None
+    smtp_use_tls: bool
     smtp_username: str | None
     oauth_client_id: str | None
     oauth_tenant: str | None

@@ -2,17 +2,25 @@ import { useState } from "react";
 
 import { useMicrosoftOAuthFlow } from "../api/useMicrosoftOAuth";
 
-export default function OAuthMicrosoftLinkFlow({ onDone }: { onDone: () => void }) {
+export default function OAuthMicrosoftLinkFlow({
+  onDone,
+  reconnectAccountId,
+}: {
+  onDone: () => void;
+  reconnectAccountId?: number;
+}) {
   const [name, setName] = useState("");
   const [color, setColor] = useState("#0F6CBD");
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [clientId, setClientId] = useState("");
-  const { start, poll, flowId } = useMicrosoftOAuthFlow();
+  const { start, poll, flowId } = useMicrosoftOAuthFlow(reconnectAccountId);
 
   if (poll.data?.status === "complete") {
     return (
       <div className="space-y-3 text-sm">
-        <p className="font-medium text-green-700 dark:text-green-400">Account linked successfully.</p>
+        <p className="font-medium text-green-700 dark:text-green-400">
+          {reconnectAccountId ? "Reconnected successfully." : "Account linked successfully."}
+        </p>
         <button onClick={onDone} className="glass-button-primary">
           Done
         </button>
@@ -45,6 +53,25 @@ export default function OAuthMicrosoftLinkFlow({ onDone }: { onDone: () => void 
             <p className="text-gray-600 dark:text-gray-400">Waiting for you to complete sign-in...</p>
           </>
         )}
+      </div>
+    );
+  }
+
+  if (reconnectAccountId) {
+    return (
+      <div className="space-y-3 text-sm">
+        <p className="text-gray-600 dark:text-gray-400">
+          Sign in again to refresh this account's connection - useful if sign-in has expired or
+          been revoked. You'll get a code to enter at microsoft.com/devicelogin.
+        </p>
+        {start.isError && <p className="text-red-600">Failed to start sign-in.</p>}
+        <button
+          onClick={() => start.mutate({})}
+          disabled={start.isPending}
+          className="glass-button-primary"
+        >
+          {start.isPending ? "Starting..." : "Reconnect"}
+        </button>
       </div>
     );
   }

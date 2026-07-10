@@ -41,7 +41,7 @@ function FolderPicker({ account }: { account: Account }) {
   );
 }
 
-function AccountRow({ account }: { account: Account }) {
+function AccountRow({ account, onEdit }: { account: Account; onEdit: (account: Account) => void }) {
   const [expanded, setExpanded] = useState(false);
   const deleteAccount = useDeleteAccount();
   const testConnection = useTestConnection();
@@ -64,6 +64,9 @@ function AccountRow({ account }: { account: Account }) {
             {account.last_sync_status === "error" ? "sync error" : "synced"}
           </span>
         )}
+        <button onClick={() => onEdit(account)} className="glass-button px-3 py-1 text-xs">
+          Edit
+        </button>
         <button onClick={() => testConnection.mutate(account.id)} className="glass-button px-3 py-1 text-xs">
           Test
         </button>
@@ -111,6 +114,22 @@ function AccountRow({ account }: { account: Account }) {
 export default function SettingsAccountsPage() {
   const { data: accounts, isLoading } = useAccounts();
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+
+  function openCreate() {
+    setEditingAccount(null);
+    setModalOpen(true);
+  }
+
+  function openEdit(account: Account) {
+    setEditingAccount(account);
+    setModalOpen(true);
+  }
+
+  function handleModalOpenChange(next: boolean) {
+    setModalOpen(next);
+    if (!next) setEditingAccount(null);
+  }
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-8">
@@ -124,7 +143,7 @@ export default function SettingsAccountsPage() {
           </Link>
           <h1 className="mt-1 text-xl font-semibold">Accounts</h1>
         </div>
-        <button onClick={() => setModalOpen(true)} className="glass-button-primary">
+        <button onClick={openCreate} className="glass-button-primary">
           Add account
         </button>
       </div>
@@ -133,11 +152,11 @@ export default function SettingsAccountsPage() {
 
       <div className="space-y-3">
         {accounts?.map((account) => (
-          <AccountRow key={account.id} account={account} />
+          <AccountRow key={account.id} account={account} onEdit={openEdit} />
         ))}
       </div>
 
-      <AccountEditorModal open={modalOpen} onOpenChange={setModalOpen} />
+      <AccountEditorModal open={modalOpen} onOpenChange={handleModalOpenChange} account={editingAccount} />
     </div>
   );
 }
