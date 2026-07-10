@@ -40,9 +40,17 @@ export function useRecentUnread() {
 }
 
 export function useMessage(id: number | null) {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: ["messages", "detail", id],
-    queryFn: () => api.get<MessageDetail>(`/api/messages/${id}`),
+    queryFn: async () => {
+      const detail = await api.get<MessageDetail>(`/api/messages/${id}`);
+      // Opening a message marks it read server-side (if it wasn't already), which
+      // changes per-account/folder unread counts - the sidebar badges otherwise have
+      // no way to know that happened until their own next independent poll.
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      return detail;
+    },
     enabled: id !== null,
     staleTime: 0,
   });
@@ -53,7 +61,10 @@ export function useUpdateFlags() {
   return useMutation({
     mutationFn: ({ id, seen, flagged }: { id: number; seen?: boolean; flagged?: boolean }) =>
       api.post(`/api/messages/${id}/flags`, { seen, flagged }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["messages"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    },
   });
 }
 
@@ -67,7 +78,10 @@ export function useMarkAllRead() {
       const qs = params.toString();
       return api.post(`/api/messages/mark-all-read${qs ? `?${qs}` : ""}`);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["messages"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    },
   });
 }
 
@@ -75,7 +89,10 @@ export function useDeleteMessage() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.delete(`/api/messages/${id}`),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["messages"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+    },
   });
 }
 
