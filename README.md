@@ -140,7 +140,10 @@ old one - no need to touch `.env` or restart anything.
 
 ## Data & privacy model
 
-- Mail is **never** deleted or moved off your mail servers by this app.
+- Mail never leaves your mail servers. The one exception is explicit deletion: hitting
+  Delete on a message moves it to that account's Trash/Deleted Items folder on the
+  server (the same "soft delete" any normal mail client does), it isn't just hidden
+  locally. Nothing is ever permanently erased by this app.
 - Only message metadata (subject, sender/recipients, date, read/flagged state, folder,
   size) is cached locally in SQLite, so the aggregated view loads instantly.
 - Message bodies and attachments are fetched live over IMAP every time you open a
