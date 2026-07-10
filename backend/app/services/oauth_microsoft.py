@@ -6,6 +6,15 @@ public HTTPS endpoint (localhost, LAN IP, behind a home network, etc).
 
 Both the IMAP scope and the Graph Mail.Send scope are acquired from the same
 underlying refresh token without a second user interaction.
+
+DEFAULT_CLIENT_ID is Microsoft's own first-party "Office" public client ID -
+the same well-known ID used by Thunderbird and several open-source IMAP/OAuth
+tools to talk to Outlook.com without every deployment needing its own Azure
+app registration. It's already consented for personal + work/school accounts
+and legacy protocol (IMAP/SMTP) scopes, so users just see a normal Microsoft
+sign-in + consent screen - no Azure Portal involved. Users can still supply
+their own client_id (e.g. if Microsoft ever restricts this one, or an org
+tenant blocks third-party first-party-ID reuse by policy).
 """
 
 from __future__ import annotations
@@ -16,6 +25,8 @@ import uuid
 from dataclasses import dataclass, field
 
 import msal
+
+DEFAULT_CLIENT_ID = "9e5f94bc-e8a4-4e73-b8be-63364c29d753"
 
 IMAP_SCOPE = ["https://outlook.office.com/IMAP.AccessAsUser.All"]
 GRAPH_SCOPE = ["https://graph.microsoft.com/Mail.Send"]

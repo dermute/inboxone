@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 class MicrosoftOAuthStart(BaseModel):
     name: str
     color: str = Field(default="#0F6CBD", pattern=r"^#[0-9A-Fa-f]{6}$")
-    client_id: str
+    client_id: str | None = None
     tenant: str = "common"
 
 

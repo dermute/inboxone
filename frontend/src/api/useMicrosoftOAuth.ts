@@ -21,8 +21,12 @@ export function useMicrosoftOAuthFlow() {
   const queryClient = useQueryClient();
 
   const start = useMutation({
-    mutationFn: (payload: { name: string; color: string; client_id: string; tenant: string }) =>
-      api.post<StartResponse>("/api/accounts/oauth/microsoft/start", payload),
+    mutationFn: (payload: {
+      name: string;
+      color: string;
+      client_id?: string;
+      tenant: string;
+    }) => api.post<StartResponse>("/api/accounts/oauth/microsoft/start", payload),
     onSuccess: (data) => setFlowId(data.flow_id),
   });
 

@@ -5,6 +5,7 @@ import { useMicrosoftOAuthFlow } from "../api/useMicrosoftOAuth";
 export default function OAuthMicrosoftLinkFlow({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState("");
   const [color, setColor] = useState("#0F6CBD");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [clientId, setClientId] = useState("");
   const { start, poll, flowId } = useMicrosoftOAuthFlow();
 
@@ -51,9 +52,8 @@ export default function OAuthMicrosoftLinkFlow({ onDone }: { onDone: () => void 
   return (
     <div className="space-y-3 text-sm">
       <p className="text-gray-600 dark:text-gray-400">
-        Requires a free Azure AD app registration - see the README for the one-time setup steps
-        (multi-tenant + personal accounts, public client flows enabled, delegated scopes
-        IMAP.AccessAsUser.All / Mail.Send / offline_access / User.Read).
+        Works with any outlook.com, hotmail.com, live.com, or Microsoft 365 account - no Azure
+        setup needed. You'll get a code to enter at microsoft.com/devicelogin.
       </p>
       <div className="flex items-center gap-2">
         <span className="w-20 text-gray-600 dark:text-gray-400">Name</span>
@@ -68,19 +68,40 @@ export default function OAuthMicrosoftLinkFlow({ onDone }: { onDone: () => void 
           className="h-8 w-14 rounded-lg border border-black/10 bg-white/70 dark:border-white/10 dark:bg-white/10"
         />
       </div>
-      <div className="flex items-center gap-2">
-        <span className="w-20 text-gray-600 dark:text-gray-400">Client ID</span>
-        <input
-          value={clientId}
-          onChange={(e) => setClientId(e.target.value)}
-          placeholder="Azure AD application (client) ID"
-          className="input flex-1"
-        />
-      </div>
+
+      <button
+        type="button"
+        onClick={() => setShowAdvanced((s) => !s)}
+        className="text-xs font-medium text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"
+      >
+        {showAdvanced ? "Hide advanced options" : "Advanced: use my own Azure app"}
+      </button>
+      {showAdvanced && (
+        <div className="space-y-2">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Only needed if you'd rather isolate this account under your own Azure AD app
+            registration instead of inboxone's built-in one. See the README for the one-time
+            setup steps (multi-tenant + personal accounts, public client flows enabled, delegated
+            scopes IMAP.AccessAsUser.All / Mail.Send / offline_access / User.Read).
+          </p>
+          <div className="flex items-center gap-2">
+            <span className="w-20 text-gray-600 dark:text-gray-400">Client ID</span>
+            <input
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              placeholder="Azure AD application (client) ID"
+              className="input flex-1"
+            />
+          </div>
+        </div>
+      )}
+
       {start.isError && <p className="text-red-600">Failed to start sign-in.</p>}
       <button
-        onClick={() => start.mutate({ name, color, client_id: clientId, tenant: "common" })}
-        disabled={!name || !clientId || start.isPending}
+        onClick={() =>
+          start.mutate({ name, color, client_id: clientId || undefined, tenant: "common" })
+        }
+        disabled={!name || start.isPending}
         className="glass-button-primary"
       >
         {start.isPending ? "Starting..." : "Connect Microsoft account"}

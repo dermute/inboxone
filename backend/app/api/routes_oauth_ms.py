@@ -21,11 +21,12 @@ _pending_metadata: dict[str, dict] = {}
 
 @router.post("/start", response_model=MicrosoftOAuthStartResponse)
 async def start(payload: MicrosoftOAuthStart) -> MicrosoftOAuthStartResponse:
-    result = await oauth_microsoft.start_device_flow(payload.client_id, payload.tenant)
+    client_id = payload.client_id or oauth_microsoft.DEFAULT_CLIENT_ID
+    result = await oauth_microsoft.start_device_flow(client_id, payload.tenant)
     _pending_metadata[result["flow_id"]] = {
         "name": payload.name,
         "color": payload.color,
-        "client_id": payload.client_id,
+        "client_id": client_id,
         "tenant": payload.tenant,
     }
     return MicrosoftOAuthStartResponse(**result)

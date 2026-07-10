@@ -89,26 +89,31 @@ it as the IMAP/SMTP password. Host: `imap.gmail.com` (port 993), `smtp.gmail.com
 
 ### Outlook.com / Microsoft 365
 
-Microsoft has deprecated basic auth for IMAP/SMTP, so Outlook accounts use OAuth2
-("modern auth") via a device-code sign-in flow. This requires you to register your own
-free Azure AD app once:
+Microsoft has deprecated basic auth for IMAP/SMTP, so Outlook accounts (personal
+`outlook.com`/`hotmail.com`/`live.com` addresses included, not just work/school ones)
+use OAuth2 ("modern auth") via a device-code sign-in flow. Settings → Add account →
+"Outlook / Microsoft 365" → enter a name → Connect. You'll get a short code to enter at
+`microsoft.com/devicelogin`, sign in with your normal Microsoft account, and you're
+done — no Azure setup required. inboxone ships with Microsoft's own first-party
+"Office" client ID pre-registered (the same well-known ID tools like Thunderbird reuse
+for exactly this), so you're just doing a normal OAuth sign-in, not registering an app.
+
+**Advanced: use your own Azure app instead.** If you'd rather isolate your account
+under an app you control (e.g. the shared client ID ever gets rate-limited or blocked),
+click "Advanced" in the connect flow and register your own, free:
 
 1. Go to **[Azure Portal](https://portal.azure.com) → App registrations → New
    registration**.
-2. Name it anything (e.g. "inboxone"). Under **Supported account types**, choose
-   *"Accounts in any organizational directory and personal Microsoft accounts"* (this
-   is required for `outlook.com`/`hotmail.com` addresses, not just work/school
-   accounts).
+2. Name it anything. Under **Supported account types**, choose *"Accounts in any
+   organizational directory and personal Microsoft accounts"*.
 3. Leave the redirect URI blank — the device-code flow doesn't need one.
 4. Go to **Authentication → Advanced settings** and set **"Allow public client
    flows"** to **Yes**.
 5. Go to **API permissions → Add a permission → Microsoft Graph → Delegated
    permissions**, and add: `IMAP.AccessAsUser.All`, `Mail.Send`, `offline_access`,
    `User.Read`. No admin consent is needed for a personal registration.
-6. Copy the **Application (client) ID** from the app's Overview page.
-7. In inboxone, go to Settings → Add account → "Outlook / Microsoft 365", paste in the
-   Client ID, and follow the on-screen code to sign in at
-   `microsoft.com/devicelogin`.
+6. Copy the **Application (client) ID** from the app's Overview page and paste it into
+   the "Advanced" Client ID field before connecting.
 
 ## Environment variables
 
