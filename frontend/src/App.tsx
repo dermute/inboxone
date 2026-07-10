@@ -21,8 +21,10 @@ function RequireAuth({ children }: { children: React.ReactElement }) {
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return (
     <>
-      {children}
-      <StatusBar />
+      <div className="flex h-screen flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <StatusBar />
+      </div>
       <NewMailWatcher />
     </>
   );

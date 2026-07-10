@@ -48,7 +48,7 @@ export default function InboxPage() {
   }
 
   return (
-    <div className="flex h-screen gap-3 p-3">
+    <div className="flex h-full gap-3 p-3">
       <AccountFilterRail
         accounts={accounts ?? []}
         selectedAccountId={selectedAccountId}

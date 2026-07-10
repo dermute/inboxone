@@ -31,8 +31,8 @@ export default function StatusBar() {
   }, [accounts]);
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-3 flex justify-center">
-      <div className="glass-card pointer-events-auto flex max-w-md items-center gap-2 px-4 py-1.5 text-xs text-gray-600 shadow-lg dark:text-gray-300">
+    <div className="flex shrink-0 justify-center px-3 pb-3 pt-1">
+      <div className="glass-card flex max-w-md items-center gap-2 px-4 py-1.5 text-xs text-gray-600 shadow-lg dark:text-gray-300">
         <span
           className={`h-1.5 w-1.5 shrink-0 rounded-full ${
             isActive ? "animate-pulse bg-indigo-500" : "bg-green-500"
