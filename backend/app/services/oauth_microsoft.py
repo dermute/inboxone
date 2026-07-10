@@ -72,7 +72,10 @@ def _build_app(client_id: str, tenant: str, token_cache: msal.SerializableTokenC
 
 
 async def start_device_flow(client_id: str, tenant: str) -> dict:
-    app = _build_app(client_id, tenant)
+    # Must pass an explicit SerializableTokenCache - leaving token_cache unset makes
+    # MSAL fall back to a plain TokenCache, which has no .serialize()/.deserialize()
+    # (that's what _drive_device_flow needs below to persist the signed-in session).
+    app = _build_app(client_id, tenant, token_cache=msal.SerializableTokenCache())
     # IMAP-only here - see module docstring for why the Graph scope can't be requested
     # in the same call.
     flow = await asyncio.to_thread(app.initiate_device_flow, scopes=IMAP_SCOPE)
