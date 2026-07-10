@@ -3,7 +3,6 @@ from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
-    DateTime,
     ForeignKey,
     Index,
     Integer,
@@ -15,6 +14,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.crypto import EncryptedString
 from app.db.session import Base
+from app.db.types import UTCDateTime
 
 
 class Protocol(str, enum.Enum):
@@ -63,13 +63,13 @@ class Account(Base):
     oauth_token_cache_enc: Mapped[str | None] = mapped_column(EncryptedString)
 
     sync_interval_seconds: Mapped[int | None] = mapped_column(Integer)
-    last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_sync_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
     last_sync_status: Mapped[str | None] = mapped_column(String)
     last_sync_error: Mapped[str | None] = mapped_column(String)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+        UTCDateTime, server_default=func.now(), onupdate=func.now()
     )
 
     folders: Mapped[list["Folder"]] = relationship(
@@ -92,7 +92,7 @@ class Folder(Base):
 
     last_uidvalidity: Mapped[int | None] = mapped_column(Integer)
     last_seen_uid: Mapped[int] = mapped_column(Integer, default=0)
-    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_synced_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
     account: Mapped["Account"] = relationship(back_populates="folders")
     messages: Mapped[list["Message"]] = relationship(
@@ -126,7 +126,7 @@ class Message(Base):
     from_addr: Mapped[str | None] = mapped_column(String)
     to_addrs: Mapped[str | None] = mapped_column(String)  # JSON array
     cc_addrs: Mapped[str | None] = mapped_column(String)  # JSON array
-    date_sent: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    date_sent: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
     is_seen: Mapped[bool] = mapped_column(Boolean, default=False)
     is_flagged: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -135,9 +135,9 @@ class Message(Base):
     snippet: Mapped[str | None] = mapped_column(String)
     size_bytes: Mapped[int | None] = mapped_column(Integer)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+        UTCDateTime, server_default=func.now(), onupdate=func.now()
     )
 
     account: Mapped["Account"] = relationship(back_populates="messages")
