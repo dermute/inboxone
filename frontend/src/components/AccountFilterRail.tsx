@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import type { Account } from "../api/types";
+import ThemeToggle from "./ThemeToggle";
 
 function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -114,7 +115,8 @@ export default function AccountFilterRail({
           );
         })}
       </nav>
-      <div className="glass-divider border-t p-2">
+      <div className="glass-divider space-y-2 border-t p-2">
+        <ThemeToggle />
         <Link
           to="/settings/accounts"
           className="glass-hover block rounded-2xl px-3 py-2 text-sm text-gray-600 dark:text-gray-300"
