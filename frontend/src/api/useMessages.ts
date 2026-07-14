@@ -36,6 +36,9 @@ export function useRecentUnread() {
     queryKey: ["messages", "recent-unread"],
     queryFn: () => api.get<MessageListPage>("/api/messages?unread_only=true&limit=20"),
     refetchInterval: 20_000,
+    // Without this, React Query pauses the interval entirely while the tab is
+    // backgrounded - the new-mail notifier would never see anything to diff against.
+    refetchIntervalInBackground: true,
   });
 }
 

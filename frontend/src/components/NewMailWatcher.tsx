@@ -11,6 +11,7 @@ function notifyNewMessage(message: MessageSummary): void {
   const notification = new Notification(message.subject || "(no subject)", {
     body: `From ${sender} · ${message.account_name}`,
     tag: `message-${message.id}`,
+    icon: "/favicon.svg",
   });
   notification.onclick = () => {
     navigationRef.current?.("/inbox");
@@ -43,10 +44,7 @@ export default function NewMailWatcher() {
     }
 
     const canNotify =
-      enabled &&
-      typeof Notification !== "undefined" &&
-      Notification.permission === "granted" &&
-      !document.hasFocus();
+      enabled && typeof Notification !== "undefined" && Notification.permission === "granted";
 
     if (canNotify) {
       for (const message of data.items) {
