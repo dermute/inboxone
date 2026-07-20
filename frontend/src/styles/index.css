@@ -40,6 +40,14 @@ body {
   }
 }
 
+@layer base {
+  /* One keyboard-focus style for every control instead of the browser default
+     outline. Text inputs are excluded - .input has its own focus ring. */
+  :where(button, [role="button"], a, select, summary, input[type="checkbox"], input[type="radio"], input[type="color"]):focus-visible {
+    @apply outline-none ring-2 ring-indigo-500/80 dark:ring-indigo-400/80;
+  }
+}
+
 @keyframes drift {
   0% {
     background-position: 0% 0%, 100% 0%, 0% 100%, 100% 100%;
