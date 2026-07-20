@@ -69,6 +69,7 @@ export default function AccountFilterRail({
                   }
                   title={isExpanded ? "Collapse folders" : "Expand folders"}
                   aria-label={`${isExpanded ? "Collapse" : "Expand"} folders for ${account.name}`}
+                  aria-expanded={isExpanded}
                   className="shrink-0 rounded-full p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
                   <ChevronRightIcon

@@ -72,7 +72,11 @@ function AccountRow({ account, onEdit }: { account: Account; onEdit: (account: A
         <button onClick={() => testConnection.mutate(account.id)} className="glass-button px-3 py-1 text-xs">
           Test
         </button>
-        <button onClick={() => setExpanded((e) => !e)} className="glass-button px-3 py-1 text-xs">
+        <button
+          onClick={() => setExpanded((e) => !e)}
+          aria-expanded={expanded}
+          className="glass-button px-3 py-1 text-xs"
+        >
           Folders
         </button>
         <button onClick={() => setConfirmRemove(true)} className="glass-button-danger px-3 py-1 text-xs">
