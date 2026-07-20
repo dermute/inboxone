@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { useMessage } from "../api/useMessages";
 import type { MessageSummary } from "../api/types";
 import { useUiStore } from "../store/uiStore";
+import { PaperclipIcon } from "./icons";
 
 function buildQuotedHtml(detail: { from_name: string | null; from_addr: string | null; date_sent: string | null; html_body: string | null; text_body: string | null }) {
   const who = detail.from_name || detail.from_addr || "them";
@@ -73,10 +74,10 @@ export default function MessageReadingPane({
             <a
               key={a.part_index}
               href={`/api/messages/${summary.id}/attachments/${a.part_index}`}
-              className="glass-button py-1"
+              className="glass-button inline-flex items-center gap-1.5 py-1"
               download
             >
-              📎 {a.filename || "attachment"}
+              <PaperclipIcon className="h-3.5 w-3.5" /> {a.filename || "attachment"}
             </a>
           ))}
         </div>

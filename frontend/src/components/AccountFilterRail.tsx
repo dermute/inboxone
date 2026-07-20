@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import type { Account } from "../api/types";
+import { ChevronRightIcon } from "./icons";
 import NotificationToggle from "./NotificationToggle";
 import ThemeToggle from "./ThemeToggle";
 
@@ -62,13 +63,12 @@ export default function AccountFilterRail({
                     setExpanded((e) => ({ ...e, [account.id]: !e[account.id] }))
                   }
                   title={isExpanded ? "Collapse folders" : "Expand folders"}
+                  aria-label={`${isExpanded ? "Collapse" : "Expand"} folders for ${account.name}`}
                   className="shrink-0 rounded-full p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
-                  <span
-                    className={`inline-block text-xs transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                  >
-                    &#9656;
-                  </span>
+                  <ChevronRightIcon
+                    className={`h-3 w-3 transition-transform ${isExpanded ? "rotate-90" : ""}`}
+                  />
                 </button>
                 <button
                   onClick={() => onSelect(account.id)}

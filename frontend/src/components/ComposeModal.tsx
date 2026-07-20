@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useAccounts } from "../api/useAccounts";
 import { useReply } from "../api/useMessages";
 import { useUiStore } from "../store/uiStore";
+import { XIcon } from "./icons";
 
 function parseAddrs(raw: string): string[] {
   return raw
@@ -61,8 +62,11 @@ export default function ComposeModal() {
         <Dialog.Content className="glass-panel fixed left-1/2 top-1/2 flex h-[80vh] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden">
           <div className="glass-divider flex items-center justify-between border-b px-5 py-3">
             <Dialog.Title className="font-medium">New message</Dialog.Title>
-            <Dialog.Close className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
-              ✕
+            <Dialog.Close
+              aria-label="Close"
+              className="rounded p-1 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <XIcon />
             </Dialog.Close>
           </div>
 

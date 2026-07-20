@@ -1,9 +1,12 @@
-import { useThemeStore, type ThemePreference } from "../store/themeStore";
+import type { ReactNode } from "react";
 
-const OPTIONS: { value: ThemePreference; label: string; icon: string }[] = [
-  { value: "light", label: "Light", icon: "☀️" },
-  { value: "dark", label: "Dark", icon: "\u{1f319}" },
-  { value: "auto", label: "Match system", icon: "\u{1f5a5}️" },
+import { useThemeStore, type ThemePreference } from "../store/themeStore";
+import { MonitorIcon, MoonIcon, SunIcon } from "./icons";
+
+const OPTIONS: { value: ThemePreference; label: string; icon: ReactNode }[] = [
+  { value: "light", label: "Light", icon: <SunIcon /> },
+  { value: "dark", label: "Dark", icon: <MoonIcon /> },
+  { value: "auto", label: "Match system", icon: <MonitorIcon /> },
 ];
 
 export default function ThemeToggle() {
@@ -19,7 +22,7 @@ export default function ThemeToggle() {
           title={opt.label}
           aria-label={opt.label}
           aria-pressed={preference === opt.value}
-          className={`flex-1 rounded-xl py-1 text-center text-xs transition-colors ${
+          className={`flex flex-1 items-center justify-center rounded-xl py-1 text-xs transition-colors ${
             preference === opt.value
               ? "bg-indigo-500/10 dark:bg-indigo-400/15"
               : "glass-hover"

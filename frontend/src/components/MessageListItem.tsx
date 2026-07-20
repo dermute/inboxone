@@ -1,4 +1,5 @@
 import type { MessageSummary } from "../api/types";
+import { MailIcon, MailOpenIcon, PaperclipIcon, TrashIcon } from "./icons";
 
 function formatDate(iso: string | null): string {
   if (!iso) return "";
@@ -40,9 +41,10 @@ export default function MessageListItem({
           onMarkRead(!message.is_seen);
         }}
         title={message.is_seen ? "Mark as unread" : "Mark as read"}
+        aria-label={message.is_seen ? "Mark as unread" : "Mark as read"}
         className="mt-1 shrink-0 rounded p-1 text-gray-400 opacity-0 transition-opacity hover:text-indigo-600 focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 dark:text-gray-500 dark:hover:text-indigo-400"
       >
-        {message.is_seen ? "✉️" : "📖"}
+        {message.is_seen ? <MailIcon /> : <MailOpenIcon />}
       </button>
       <span
         className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
@@ -68,8 +70,8 @@ export default function MessageListItem({
         <div className="truncate text-xs text-gray-500 dark:text-gray-400">{message.snippet}</div>
       </div>
       {message.has_attachments && (
-        <span className="mt-1 shrink-0 text-gray-500 dark:text-gray-400" title="Has attachments">
-          📎
+        <span className="mt-1.5 shrink-0 text-gray-500 dark:text-gray-400" title="Has attachments">
+          <PaperclipIcon className="h-3.5 w-3.5" />
         </span>
       )}
       <button
@@ -78,9 +80,10 @@ export default function MessageListItem({
           onDelete();
         }}
         title="Delete"
+        aria-label="Delete message"
         className="mt-1 shrink-0 rounded p-1 text-gray-400 opacity-0 transition-opacity hover:text-red-600 focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 dark:text-gray-500 dark:hover:text-red-400"
       >
-        🗑️
+        <TrashIcon />
       </button>
     </div>
   );
