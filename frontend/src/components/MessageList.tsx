@@ -118,7 +118,7 @@ export default function MessageList({
           ))}
         </div>
       ) : messages.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-8 text-center text-sm text-gray-500 dark:text-gray-400">
+        <div className="flex flex-1 items-center justify-center px-8 text-center text-sm text-gray-600 dark:text-gray-300">
           No messages yet - accounts sync automatically in the background.
         </div>
       ) : (

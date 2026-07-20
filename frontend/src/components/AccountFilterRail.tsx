@@ -131,7 +131,7 @@ export default function AccountFilterRail({
                     </button>
                   ))}
                   {account.folders.length === 0 && (
-                    <p className="px-3 py-1 text-xs text-gray-500 dark:text-gray-400">No folders synced</p>
+                    <p className="px-3 py-1 text-xs text-gray-600 dark:text-gray-300">No folders synced</p>
                   )}
                 </div>
               )}

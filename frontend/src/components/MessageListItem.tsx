@@ -75,7 +75,7 @@ export default function MessageListItem({
             >
               {message.from_name || message.from_addr || "(unknown sender)"}
             </span>
-            <span className="shrink-0 text-xs text-gray-500 dark:text-gray-400">
+            <span className="shrink-0 text-xs text-gray-600 dark:text-gray-300">
               {formatDate(message.date_sent)}
             </span>
           </span>
@@ -84,7 +84,7 @@ export default function MessageListItem({
           >
             {message.subject || "(no subject)"}
           </span>
-          <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
+          <span className="block truncate text-xs text-gray-600 dark:text-gray-300">
             {message.snippet}
           </span>
         </span>

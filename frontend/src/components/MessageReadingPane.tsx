@@ -37,7 +37,7 @@ export default function MessageReadingPane({
 
   if (!summary) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+      <div className="flex h-full items-center justify-center text-sm text-gray-600 dark:text-gray-300">
         Select a message to read it
       </div>
     );
@@ -87,7 +87,7 @@ export default function MessageReadingPane({
             <span>&middot;</span>
             <span>{detail.date_sent ? new Date(detail.date_sent).toLocaleString() : ""}</span>
           </div>
-          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <div className="mt-1 text-xs text-gray-600 dark:text-gray-300">
             To: {detail.to_addrs.join(", ")}
           </div>
         </div>
