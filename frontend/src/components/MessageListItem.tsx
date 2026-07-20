@@ -38,7 +38,7 @@ export default function MessageListItem({
         tabIndex={-1}
         title={message.is_seen ? "Mark as unread" : "Mark as read"}
         aria-label={message.is_seen ? "Mark as unread" : "Mark as read"}
-        className="mt-1 shrink-0 rounded p-1 text-gray-400 opacity-0 transition-opacity hover:text-indigo-600 focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 dark:text-gray-500 dark:hover:text-indigo-400"
+        className="mt-1 shrink-0 rounded p-1 text-gray-400 opacity-0 transition-opacity hover:text-indigo-600 focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 dark:text-gray-500 dark:hover:text-indigo-400"
       >
         {message.is_seen ? <MailIcon /> : <MailOpenIcon />}
       </button>
@@ -99,7 +99,7 @@ export default function MessageListItem({
         tabIndex={-1}
         title="Delete"
         aria-label="Delete message"
-        className="mt-1 shrink-0 rounded p-1 text-gray-400 opacity-0 transition-opacity hover:text-red-600 focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 dark:text-gray-500 dark:hover:text-red-400"
+        className="mt-1 shrink-0 rounded p-1 text-gray-400 opacity-0 transition-opacity hover:text-red-600 focus:opacity-100 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 dark:text-gray-500 dark:hover:text-red-400"
       >
         <TrashIcon />
       </button>
