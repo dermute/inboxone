@@ -26,7 +26,7 @@ export default function MessageList({
   markAllPending: boolean;
   onDelete: (id: number) => void;
 }) {
-  const sentinelRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
     const el = sentinelRef.current;
@@ -42,6 +42,41 @@ export default function MessageList({
   }, [hasMore, onLoadMore]);
 
   const hasUnread = messages.some((m) => !m.is_seen);
+  // Roving tabindex: the selected row (or the first row) is the single tab stop.
+  const tabbableId = messages.some((m) => m.id === selectedId) ? selectedId : messages[0]?.id;
+
+  function handleListKeyDown(e: React.KeyboardEvent<HTMLUListElement>) {
+    const active = document.activeElement;
+    if (!(active instanceof HTMLElement)) return;
+
+    if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
+      const rows = Array.from(e.currentTarget.querySelectorAll<HTMLElement>("[data-msg-row]"));
+      if (rows.length === 0) return;
+      const currentIndex = rows.findIndex((r) => r.closest("li") === active.closest("li"));
+      let next: number;
+      if (e.key === "Home") next = 0;
+      else if (e.key === "End") next = rows.length - 1;
+      else if (currentIndex === -1) next = 0;
+      else if (e.key === "ArrowDown") next = Math.min(currentIndex + 1, rows.length - 1);
+      else next = Math.max(currentIndex - 1, 0);
+      e.preventDefault();
+      rows[next].focus();
+      rows[next].scrollIntoView({ block: "nearest" });
+    } else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      // Move between the controls of the focused row (mark-read, open, delete).
+      const row = active.closest("li");
+      if (!row) return;
+      const controls = Array.from(row.querySelectorAll<HTMLElement>("button"));
+      const currentIndex = controls.indexOf(active);
+      if (currentIndex === -1) return;
+      const next =
+        e.key === "ArrowRight"
+          ? Math.min(currentIndex + 1, controls.length - 1)
+          : Math.max(currentIndex - 1, 0);
+      e.preventDefault();
+      controls[next].focus();
+    }
+  }
 
   return (
     <div className="flex h-full flex-col">
@@ -59,19 +94,25 @@ export default function MessageList({
           No messages yet - accounts sync automatically in the background.
         </div>
       ) : (
-        <div className="flex-1 divide-y divide-black/[0.06] overflow-y-auto dark:divide-white/10">
+        <ul
+          role="list"
+          aria-label="Messages"
+          onKeyDown={handleListKeyDown}
+          className="flex-1 divide-y divide-black/[0.06] overflow-y-auto dark:divide-white/10"
+        >
           {messages.map((m) => (
             <MessageListItem
               key={m.id}
               message={m}
               selected={m.id === selectedId}
+              tabbable={m.id === tabbableId}
               onClick={() => onSelect(m.id)}
               onMarkRead={(seen) => onMarkRead(m.id, seen)}
               onDelete={() => onDelete(m.id)}
             />
           ))}
-          <div ref={sentinelRef} className="h-4" />
-        </div>
+          <li ref={sentinelRef} aria-hidden="true" className="h-4" />
+        </ul>
       )}
     </div>
   );
