@@ -9,6 +9,7 @@ import {
   useUpdateAccountFolders,
 } from "../api/useAccounts";
 import AccountEditorModal from "../components/AccountEditorModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import type { Account } from "../api/types";
 
 function FolderPicker({ account }: { account: Account }) {
@@ -43,6 +44,7 @@ function FolderPicker({ account }: { account: Account }) {
 
 function AccountRow({ account, onEdit }: { account: Account; onEdit: (account: Account) => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const deleteAccount = useDeleteAccount();
   const testConnection = useTestConnection();
 
@@ -73,14 +75,18 @@ function AccountRow({ account, onEdit }: { account: Account; onEdit: (account: A
         <button onClick={() => setExpanded((e) => !e)} className="glass-button px-3 py-1 text-xs">
           Folders
         </button>
-        <button
-          onClick={() => {
-            if (confirm(`Remove account "${account.name}"?`)) deleteAccount.mutate(account.id);
-          }}
-          className="rounded-full border border-red-200 bg-red-50/90 px-3 py-1 text-xs font-medium text-red-700 backdrop-blur-md transition hover:bg-red-100 dark:border-red-400/30 dark:bg-red-400/15 dark:text-red-300 dark:hover:bg-red-400/25"
-        >
+        <button onClick={() => setConfirmRemove(true)} className="glass-button-danger px-3 py-1 text-xs">
           Remove
         </button>
+        <ConfirmDialog
+          open={confirmRemove}
+          onOpenChange={setConfirmRemove}
+          title="Remove account"
+          description={`Remove "${account.name}" and its locally synced messages? Mail on the server is not affected.`}
+          confirmLabel="Remove"
+          destructive
+          onConfirm={() => deleteAccount.mutate(account.id)}
+        />
       </div>
       {testConnection.data && testConnection.variables === account.id && (
         <div className="glass-divider border-t px-4 py-2 text-xs">

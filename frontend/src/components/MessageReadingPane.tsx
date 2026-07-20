@@ -103,10 +103,7 @@ export default function MessageReadingPane({
         >
           Reply
         </button>
-        <button
-          onClick={() => onDelete(summary.id)}
-          className="rounded-full border border-red-200 bg-red-50/90 px-4 py-2 text-sm font-medium text-red-700 backdrop-blur-md transition hover:bg-red-100 dark:border-red-400/30 dark:bg-red-400/15 dark:text-red-300 dark:hover:bg-red-400/25"
-        >
+        <button onClick={() => onDelete(summary.id)} className="glass-button-danger">
           Delete
         </button>
       </div>
