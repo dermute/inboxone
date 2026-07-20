@@ -56,10 +56,18 @@ export default function MessageListItem({
         className="flex min-w-0 flex-1 cursor-pointer items-start gap-3 text-left"
       >
         <span
+          aria-hidden="true"
           className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
           style={{ backgroundColor: message.account_color }}
           title={message.account_name}
         />
+        {/* Unread state, account, and attachments are otherwise conveyed only
+            visually (font weight, colored dot, icon). */}
+        <span className="sr-only">
+          {message.is_seen ? "" : "Unread. "}
+          {`Account ${message.account_name}.`}
+          {message.has_attachments ? " Has attachments." : ""}
+        </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline justify-between gap-2">
             <span

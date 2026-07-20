@@ -8,7 +8,11 @@ import ThemeToggle from "./ThemeToggle";
 
 function UnreadBadge({ count }: { count: number }) {
   if (count <= 0) return null;
-  return <span className="glass-badge ml-auto shrink-0">{count}</span>;
+  return (
+    <span aria-label={`${count} unread`} className="glass-badge ml-auto shrink-0">
+      {count}
+    </span>
+  );
 }
 
 function accountUnreadCount(account: Account): number {

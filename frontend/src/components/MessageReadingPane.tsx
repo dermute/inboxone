@@ -50,9 +50,12 @@ export default function MessageReadingPane({
         <h2 className="text-lg font-semibold">{detail.subject || "(no subject)"}</h2>
         <div className="mt-1 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
           <span
-            className="h-2 w-2 rounded-full"
+            aria-hidden="true"
+            className="h-2 w-2 shrink-0 rounded-full"
             style={{ backgroundColor: summary.account_color }}
           />
+          <span className="shrink-0">{summary.account_name}</span>
+          <span aria-hidden="true">&middot;</span>
           <span>
             {detail.from_name} &lt;{detail.from_addr}&gt;
           </span>
