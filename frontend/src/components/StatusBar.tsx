@@ -32,8 +32,13 @@ export default function StatusBar() {
 
   return (
     <div className="flex shrink-0 justify-center px-3 pb-3 pt-1">
-      <div className="glass-card flex max-w-md items-center gap-2 px-4 py-1.5 text-xs text-gray-600 shadow-lg dark:text-gray-300">
+      <div
+        role="status"
+        aria-live="polite"
+        className="glass-card flex max-w-md items-center gap-2 px-4 py-1.5 text-xs text-gray-600 shadow-lg dark:text-gray-300"
+      >
         <span
+          aria-hidden="true"
           className={`h-1.5 w-1.5 shrink-0 rounded-full ${
             isActive ? "animate-pulse bg-indigo-500" : "bg-green-500"
           }`}

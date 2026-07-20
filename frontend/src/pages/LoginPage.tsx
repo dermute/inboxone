@@ -28,15 +28,25 @@ export default function LoginPage() {
         <p className="mb-6 text-sm text-gray-600 dark:text-gray-400">
           Enter the app password to continue.
         </p>
+        <label htmlFor="app-password" className="sr-only">
+          App password
+        </label>
         <input
+          id="app-password"
           type="password"
           autoFocus
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Password"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? "login-error" : undefined}
           className="input mb-3 py-2"
         />
-        {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
+        {error && (
+          <p id="login-error" role="alert" className="mb-3 text-sm text-red-600 dark:text-red-400">
+            {error}
+          </p>
+        )}
         <button type="submit" disabled={login.isPending} className="glass-button-primary w-full">
           {login.isPending ? "Signing in..." : "Sign in"}
         </button>

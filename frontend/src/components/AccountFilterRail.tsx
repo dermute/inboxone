@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import type { Account } from "../api/types";
+import { toast } from "../store/toastStore";
 import { ChevronRightIcon } from "./icons";
 import NotificationToggle from "./NotificationToggle";
 import ThemeToggle from "./ThemeToggle";
@@ -85,12 +86,16 @@ export default function AccountFilterRail({
                   <span className="truncate">{account.name}</span>
                 </button>
                 {account.last_sync_status === "error" ? (
-                  <span
+                  // A button, not a title-only span: keyboard and touch users
+                  // have no other way to read the error message.
+                  <button
+                    onClick={() => toast(account.last_sync_error ?? "Sync error", { duration: 8000 })}
                     title={account.last_sync_error ?? "Sync error"}
-                    className="shrink-0 font-bold text-red-600 dark:text-red-400"
+                    aria-label={`Sync error for ${account.name}: ${account.last_sync_error ?? "unknown error"}`}
+                    className="shrink-0 rounded px-1 font-bold text-red-600 dark:text-red-400"
                   >
                     !
-                  </span>
+                  </button>
                 ) : (
                   <UnreadBadge count={unread} />
                 )}
