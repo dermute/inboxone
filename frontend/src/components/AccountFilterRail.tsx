@@ -26,14 +26,27 @@ export default function AccountFilterRail({
   selectedFolderId,
   onSelect,
   onSelectFolder,
+  onNavigate,
 }: {
   accounts: Account[];
   selectedAccountId: number | null;
   selectedFolderId: number | null;
   onSelect: (id: number | null) => void;
   onSelectFolder: (accountId: number, folderId: number | null) => void;
+  /* Called after any navigation choice - lets the mobile drawer close itself. */
+  onNavigate?: () => void;
 }) {
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+
+  function select(id: number | null) {
+    onSelect(id);
+    onNavigate?.();
+  }
+
+  function selectFolder(accountId: number, folderId: number | null) {
+    onSelectFolder(accountId, folderId);
+    onNavigate?.();
+  }
 
   return (
     <div className="glass-panel flex h-full w-60 shrink-0 flex-col overflow-hidden">
@@ -42,7 +55,7 @@ export default function AccountFilterRail({
       </div>
       <nav className="flex-1 overflow-y-auto px-2 pb-2">
         <button
-          onClick={() => onSelect(null)}
+          onClick={() => select(null)}
           className={`mb-1 flex w-full items-center rounded-2xl px-3 py-2 text-sm transition-colors ${
             selectedAccountId === null
               ? "glass-selected font-medium"
@@ -77,7 +90,7 @@ export default function AccountFilterRail({
                   />
                 </button>
                 <button
-                  onClick={() => onSelect(account.id)}
+                  onClick={() => select(account.id)}
                   className="flex min-w-0 flex-1 items-center gap-2 py-2 text-left"
                 >
                   <span
@@ -106,7 +119,7 @@ export default function AccountFilterRail({
                   {account.folders.map((folder) => (
                     <button
                       key={folder.id}
-                      onClick={() => onSelectFolder(account.id, folder.id)}
+                      onClick={() => selectFolder(account.id, folder.id)}
                       className={`flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-sm transition-colors ${
                         selectedFolderId === folder.id
                           ? "glass-selected font-medium"
@@ -137,6 +150,7 @@ export default function AccountFilterRail({
         </div>
         <Link
           to="/settings/accounts"
+          onClick={onNavigate}
           className="glass-hover block rounded-2xl px-3 py-2 text-sm text-gray-600 dark:text-gray-300"
         >
           Settings

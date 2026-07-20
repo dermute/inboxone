@@ -1,3 +1,4 @@
+import * as Dialog from "@radix-ui/react-dialog";
 import { useMemo, useRef, useState } from "react";
 
 import { useAccounts } from "../api/useAccounts";
@@ -43,6 +44,7 @@ export default function InboxPage() {
   const deleteMessage = useDeleteMessage();
   const [pendingDeleteIds, setPendingDeleteIds] = useState<ReadonlySet<number>>(new Set());
   const deleteTimers = useRef(new Map<number, number>());
+  const [railOpen, setRailOpen] = useState(false);
 
   const messages = useMemo(
     () =>
@@ -94,16 +96,39 @@ export default function InboxPage() {
     }
   }
 
+  const rail = (
+    <AccountFilterRail
+      accounts={accounts ?? []}
+      selectedAccountId={selectedAccountId}
+      selectedFolderId={selectedFolderId}
+      onSelect={selectAccount}
+      onSelectFolder={selectFolder}
+      onNavigate={() => setRailOpen(false)}
+    />
+  );
+
   return (
     <div className="flex h-full gap-3 p-3">
-      <AccountFilterRail
-        accounts={accounts ?? []}
-        selectedAccountId={selectedAccountId}
-        selectedFolderId={selectedFolderId}
-        onSelect={selectAccount}
-        onSelectFolder={selectFolder}
-      />
-      <div className="glass-panel w-[380px] shrink-0 overflow-hidden">
+      <div className="hidden shrink-0 lg:block lg:h-full">{rail}</div>
+      {/* Below lg the rail becomes a drawer; Radix supplies focus trap and Esc. */}
+      <Dialog.Root open={railOpen} onOpenChange={setRailOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden" />
+          <Dialog.Content
+            aria-describedby={undefined}
+            className="fixed inset-y-0 left-0 z-40 w-72 p-3 lg:hidden"
+          >
+            <Dialog.Title className="sr-only">Accounts and folders</Dialog.Title>
+            {rail}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+      {/* Below lg only one pane is visible: the list, or the message once one is open. */}
+      <div
+        className={`glass-panel w-full shrink-0 overflow-hidden lg:w-[380px] ${
+          selectedMessageId !== null ? "hidden lg:block" : ""
+        }`}
+      >
         <MessageList
           messages={messages}
           selectedId={selectedMessageId}
@@ -117,10 +142,19 @@ export default function InboxPage() {
           }
           markAllPending={markAllRead.isPending}
           onDelete={handleDelete}
+          onOpenRail={() => setRailOpen(true)}
         />
       </div>
-      <div className="glass-panel flex-1 overflow-hidden">
-        <MessageReadingPane summary={selectedSummary} onDelete={handleDelete} />
+      <div
+        className={`glass-panel flex-1 overflow-hidden ${
+          selectedMessageId === null ? "hidden lg:block" : ""
+        }`}
+      >
+        <MessageReadingPane
+          summary={selectedSummary}
+          onDelete={handleDelete}
+          onBack={() => setSelectedMessageId(null)}
+        />
       </div>
       <ComposeModal />
     </div>

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import type { MessageSummary } from "../api/types";
+import { MenuIcon } from "./icons";
 import MessageListItem from "./MessageListItem";
 
 export default function MessageList({
@@ -14,6 +15,7 @@ export default function MessageList({
   onMarkAllRead,
   markAllPending,
   onDelete,
+  onOpenRail,
 }: {
   messages: MessageSummary[];
   selectedId: number | null;
@@ -25,6 +27,7 @@ export default function MessageList({
   onMarkAllRead: () => void;
   markAllPending: boolean;
   onDelete: (id: number) => void;
+  onOpenRail: () => void;
 }) {
   const sentinelRef = useRef<HTMLLIElement>(null);
 
@@ -80,11 +83,18 @@ export default function MessageList({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="glass-divider flex shrink-0 items-center justify-end border-b px-4 py-2">
+      <div className="glass-divider flex shrink-0 items-center border-b px-4 py-2">
+        <button
+          onClick={onOpenRail}
+          aria-label="Open accounts and folders"
+          className="-ml-1 rounded p-1 text-gray-600 dark:text-gray-300 lg:hidden"
+        >
+          <MenuIcon />
+        </button>
         <button
           onClick={onMarkAllRead}
           disabled={!hasUnread || markAllPending}
-          className="text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:cursor-default disabled:text-gray-400 dark:text-indigo-400 dark:hover:text-indigo-300 dark:disabled:text-gray-600"
+          className="ml-auto text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:cursor-default disabled:text-gray-400 dark:text-indigo-400 dark:hover:text-indigo-300 dark:disabled:text-gray-600"
         >
           Mark all as read
         </button>

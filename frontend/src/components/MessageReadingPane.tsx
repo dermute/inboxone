@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useMessage } from "../api/useMessages";
 import type { MessageSummary } from "../api/types";
 import { useUiStore } from "../store/uiStore";
-import { PaperclipIcon } from "./icons";
+import { ArrowLeftIcon, PaperclipIcon } from "./icons";
 
 function buildQuotedHtml(detail: { from_name: string | null; from_addr: string | null; date_sent: string | null; html_body: string | null; text_body: string | null }) {
   const who = detail.from_name || detail.from_addr || "them";
@@ -15,9 +15,12 @@ function buildQuotedHtml(detail: { from_name: string | null; from_addr: string |
 export default function MessageReadingPane({
   summary,
   onDelete,
+  onBack,
 }: {
   summary: MessageSummary | null;
   onDelete: (id: number) => void;
+  /* Below lg the pane replaces the list, so it needs a way back. */
+  onBack: () => void;
 }) {
   const { data: detail, isLoading } = useMessage(summary?.id ?? null);
   const openReply = useUiStore((s) => s.openReply);
@@ -49,24 +52,33 @@ export default function MessageReadingPane({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b glass-divider px-6 py-4">
-        <h2 className="text-lg font-semibold">{detail.subject || "(no subject)"}</h2>
-        <div className="mt-1 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-          <span
-            aria-hidden="true"
-            className="h-2 w-2 shrink-0 rounded-full"
-            style={{ backgroundColor: summary.account_color }}
-          />
-          <span className="shrink-0">{summary.account_name}</span>
-          <span aria-hidden="true">&middot;</span>
-          <span>
-            {detail.from_name} &lt;{detail.from_addr}&gt;
-          </span>
-          <span>&middot;</span>
-          <span>{detail.date_sent ? new Date(detail.date_sent).toLocaleString() : ""}</span>
-        </div>
-        <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          To: {detail.to_addrs.join(", ")}
+      <div className="glass-divider flex items-start gap-2 border-b px-4 py-4 lg:px-6">
+        <button
+          onClick={onBack}
+          aria-label="Back to message list"
+          className="mt-0.5 shrink-0 rounded p-1 text-gray-600 dark:text-gray-300 lg:hidden"
+        >
+          <ArrowLeftIcon />
+        </button>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-lg font-semibold">{detail.subject || "(no subject)"}</h2>
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-gray-600 dark:text-gray-400">
+            <span
+              aria-hidden="true"
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: summary.account_color }}
+            />
+            <span className="shrink-0">{summary.account_name}</span>
+            <span aria-hidden="true">&middot;</span>
+            <span>
+              {detail.from_name} &lt;{detail.from_addr}&gt;
+            </span>
+            <span>&middot;</span>
+            <span>{detail.date_sent ? new Date(detail.date_sent).toLocaleString() : ""}</span>
+          </div>
+          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            To: {detail.to_addrs.join(", ")}
+          </div>
         </div>
       </div>
 
