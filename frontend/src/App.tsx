@@ -4,7 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-route
 import { useAuth } from "./api/useAuth";
 import NewMailWatcher from "./components/NewMailWatcher";
 import StatusBar from "./components/StatusBar";
-import TabTitleUnread from "./components/TabTitleUnread";
+import TabUnreadIndicator from "./components/TabUnreadIndicator";
 import Toaster from "./components/Toaster";
 import InboxPage from "./pages/InboxPage";
 import LoginPage from "./pages/LoginPage";
@@ -28,7 +28,7 @@ function RequireAuth({ children }: { children: React.ReactElement }) {
         <StatusBar />
       </div>
       <NewMailWatcher />
-      <TabTitleUnread />
+      <TabUnreadIndicator />
       <Toaster />
     </>
   );
