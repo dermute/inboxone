@@ -25,7 +25,10 @@ export default function MessageReadingPane({
   const srcDoc = useMemo(() => {
     if (!detail) return "";
     const body = detail.html_body ?? `<pre style="white-space:pre-wrap;font-family:inherit;">${escapeHtml(detail.text_body ?? "")}</pre>`;
-    return `<html><head><base target="_blank"></head><body style="margin:0;font-family:system-ui,sans-serif;font-size:14px;">${body}</body></html>`;
+    // Iframe canvases are transparent by default, so without an explicit
+    // background a mail that doesn't set its own renders black default text
+    // over the dark glass panel. Mail is designed against white - force it.
+    return `<html><head><meta name="color-scheme" content="light"><base target="_blank"></head><body style="margin:0;padding:12px;background:#fff;color:#111;font-family:system-ui,sans-serif;font-size:14px;">${body}</body></html>`;
   }, [detail]);
 
   if (!summary) {
