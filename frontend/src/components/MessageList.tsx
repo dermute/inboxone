@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import type { MessageSummary } from "../api/types";
 import { MenuIcon } from "./icons";
 import MessageListItem from "./MessageListItem";
+import Skeleton from "./Skeleton";
 
 export default function MessageList({
   messages,
@@ -99,7 +100,24 @@ export default function MessageList({
           Mark all as read
         </button>
       </div>
-      {!isLoading && messages.length === 0 ? (
+      {isLoading ? (
+        <div
+          aria-label="Loading messages"
+          role="status"
+          className="flex-1 divide-y divide-black/[0.06] overflow-hidden dark:divide-white/10"
+        >
+          {Array.from({ length: 8 }, (_, i) => (
+            <div key={i} className="space-y-2 px-4 py-3">
+              <div className="flex justify-between gap-2">
+                <Skeleton className="h-3.5 w-1/3" />
+                <Skeleton className="h-3 w-10" />
+              </div>
+              <Skeleton className="h-3.5 w-2/3" />
+              <Skeleton className="h-3 w-5/6" />
+            </div>
+          ))}
+        </div>
+      ) : messages.length === 0 ? (
         <div className="flex flex-1 items-center justify-center px-8 text-center text-sm text-gray-500 dark:text-gray-400">
           No messages yet - accounts sync automatically in the background.
         </div>

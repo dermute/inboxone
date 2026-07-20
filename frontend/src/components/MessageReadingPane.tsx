@@ -4,6 +4,7 @@ import { useMessage } from "../api/useMessages";
 import type { MessageSummary } from "../api/types";
 import { useUiStore } from "../store/uiStore";
 import { ArrowLeftIcon, PaperclipIcon } from "./icons";
+import Skeleton from "./Skeleton";
 
 function buildQuotedHtml(detail: { from_name: string | null; from_addr: string | null; date_sent: string | null; html_body: string | null; text_body: string | null }) {
   const who = detail.from_name || detail.from_addr || "them";
@@ -44,8 +45,18 @@ export default function MessageReadingPane({
 
   if (isLoading || !detail) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-        Loading...
+      <div aria-label="Loading message" role="status" className="flex h-full flex-col">
+        <div className="glass-divider space-y-2.5 border-b px-6 py-4">
+          <Skeleton className="h-5 w-1/2" />
+          <Skeleton className="h-3.5 w-2/3" />
+          <Skeleton className="h-3 w-1/3" />
+        </div>
+        <div className="space-y-3 px-6 py-5">
+          <Skeleton className="h-3.5 w-full" />
+          <Skeleton className="h-3.5 w-11/12" />
+          <Skeleton className="h-3.5 w-4/5" />
+          <Skeleton className="h-3.5 w-2/3" />
+        </div>
       </div>
     );
   }

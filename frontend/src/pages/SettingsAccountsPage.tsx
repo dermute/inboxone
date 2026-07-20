@@ -10,6 +10,7 @@ import {
 } from "../api/useAccounts";
 import AccountEditorModal from "../components/AccountEditorModal";
 import ConfirmDialog from "../components/ConfirmDialog";
+import Skeleton from "../components/Skeleton";
 import type { Account } from "../api/types";
 
 function FolderPicker({ account }: { account: Account }) {
@@ -158,7 +159,19 @@ export default function SettingsAccountsPage() {
         </button>
       </div>
 
-      {isLoading && <p className="text-sm text-gray-500 dark:text-gray-400">Loading...</p>}
+      {isLoading && (
+        <div aria-label="Loading accounts" role="status" className="space-y-3">
+          {Array.from({ length: 2 }, (_, i) => (
+            <div key={i} className="glass-card flex items-center gap-3 px-4 py-3">
+              <Skeleton className="h-3 w-3 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="space-y-3">
         {accounts?.map((account) => (
