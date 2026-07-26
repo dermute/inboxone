@@ -193,7 +193,7 @@ The Vite dev server proxies `/api` requests to `http://localhost:8000`.
 
 ## AI attribution
 
-This project was developed with AI assistance (Anthropic Claude, Sonnet 5).
+This project was developed with AI assistance.
 
 <div style="display: flex; align-items: center; white-space: nowrap; gap: 0.5rem; padding: 8px;">
   <div style="font-family: IBM Plex Sans; font-weight: 400; font-size: 16px; line-height: 22px; letter-spacing: 0px;">
