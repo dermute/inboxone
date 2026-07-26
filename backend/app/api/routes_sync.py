@@ -1,3 +1,5 @@
+import asyncio
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,16 +18,32 @@ async def get_activity() -> dict:
     return {"items": activity.snapshot()}
 
 
+# asyncio only keeps weak references to running tasks, so a fire-and-forget sync can
+# be garbage-collected mid-flight unless something holds on to it.
+_background_syncs: set[asyncio.Task] = set()
+
+
+def _spawn_sync(account_id: int) -> None:
+    task = asyncio.create_task(sync_account(account_id))
+    _background_syncs.add(task)
+    task.add_done_callback(_background_syncs.discard)
+
+
 @router.post("/trigger")
 async def trigger_sync(account_id: int | None = None, db: AsyncSession = Depends(get_db)) -> dict:
+    # Returns as soon as the syncs are queued rather than awaiting them: a full sync
+    # across several accounts can take minutes, far longer than a browser or reverse
+    # proxy will hold a request open. Callers watch /api/sync/activity for progress.
+    # Concurrency stays bounded by the sync worker's own semaphore, and each account's
+    # failures are recorded against that account instead of surfacing here.
     if account_id is not None:
-        await sync_account(account_id)
+        _spawn_sync(account_id)
         return {"triggered": [account_id]}
 
     result = await db.execute(select(Account.id).where(Account.is_active.is_(True)))
     ids = [row[0] for row in result.all()]
     for aid in ids:
-        await sync_account(aid)
+        _spawn_sync(aid)
     return {"triggered": ids}
 
 
