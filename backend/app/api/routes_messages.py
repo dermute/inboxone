@@ -5,8 +5,8 @@ import base64
 import json
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlalchemy import delete, select, tuple_
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from sqlalchemy import delete, or_, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -43,6 +43,7 @@ async def list_messages(
     account_id: int | None = None,
     folder_id: int | None = None,
     unread_only: bool = False,
+    search: str | None = Query(default=None, max_length=200),
     limit: int = 50,
     cursor: str | None = None,
     db: AsyncSession = Depends(get_db),
@@ -54,6 +55,20 @@ async def list_messages(
         query = query.where(Message.folder_id == folder_id)
     if unread_only:
         query = query.where(Message.is_seen.is_(False))
+    if search and (term := search.strip()):
+        # Search the locally cached envelope fields only. This keeps a unified
+        # search fast and preserves the app's promise not to persist bodies.
+        escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        pattern = f"%{escaped}%"
+        query = query.where(
+            or_(
+                Message.subject.ilike(pattern, escape="\\"),
+                Message.from_name.ilike(pattern, escape="\\"),
+                Message.from_addr.ilike(pattern, escape="\\"),
+                Message.to_addrs.ilike(pattern, escape="\\"),
+                Message.cc_addrs.ilike(pattern, escape="\\"),
+            )
+        )
 
     if cursor:
         cursor_date, cursor_id = _decode_cursor(cursor)
