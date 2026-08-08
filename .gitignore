@@ -1,21 +1,34 @@
 # env / secrets
 .env
+.env.*
+!.env.example
 data/
 
 # python
 __pycache__/
-*.pyc
+*.py[cod]
 .venv/
 venv/
 *.egg-info/
+build/
+dist/
 .pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
 
 # node / frontend
 node_modules/
-frontend/dist/
+*.tsbuildinfo
+npm-debug.log*
 
 # editors / os
 .DS_Store
 .vscode/
 .idea/
 *.swp
+*.swo
+*~
