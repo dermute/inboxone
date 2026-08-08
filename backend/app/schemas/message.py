@@ -57,10 +57,18 @@ class FlagsUpdate(BaseModel):
     flagged: bool | None = None
 
 
-class ReplyRequest(BaseModel):
+class OutgoingMessageRequest(BaseModel):
     account_id: int | None = None
     to: list[str]
     cc: list[str] = []
     bcc: list[str] = []
     subject: str
     body_html: str
+
+
+class ReplyRequest(OutgoingMessageRequest):
+    pass
+
+
+class ForwardRequest(OutgoingMessageRequest):
+    pass

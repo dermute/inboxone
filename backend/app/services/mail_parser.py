@@ -115,3 +115,26 @@ def build_reply_mime(
     msg.set_content(plain_fallback)
     msg.add_alternative(body_html, subtype="html")
     return msg
+
+
+def build_forward_mime(
+    *,
+    from_addr: str,
+    to: list[str],
+    cc: list[str],
+    bcc: list[str],
+    subject: str,
+    body_html: str,
+) -> EmailMessage:
+    # A forward is a new message, not part of the source message's reply
+    # thread, so it deliberately carries no In-Reply-To or References headers.
+    return build_reply_mime(
+        from_addr=from_addr,
+        to=to,
+        cc=cc,
+        bcc=bcc,
+        subject=subject,
+        body_html=body_html,
+        original_message_id=None,
+        original_references=None,
+    )

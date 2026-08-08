@@ -2,7 +2,8 @@ import { create } from "zustand";
 
 interface ComposeState {
   open: boolean;
-  replyToMessageId: number | null;
+  mode: "reply" | "forward";
+  sourceMessageId: number | null;
   defaultAccountId: number | null;
   defaultTo: string[];
   defaultSubject: string;
@@ -18,7 +19,14 @@ interface UiState {
   setSelectedFolderId: (id: number | null) => void;
   setSelectedMessageId: (id: number | null) => void;
   openReply: (params: {
-    replyToMessageId: number;
+    sourceMessageId: number;
+    defaultAccountId: number;
+    defaultTo: string[];
+    defaultSubject: string;
+    quotedHtml: string;
+  }) => void;
+  openForward: (params: {
+    sourceMessageId: number;
     defaultAccountId: number;
     defaultTo: string[];
     defaultSubject: string;
@@ -29,7 +37,8 @@ interface UiState {
 
 const initialCompose: ComposeState = {
   open: false,
-  replyToMessageId: null,
+  mode: "reply",
+  sourceMessageId: null,
   defaultAccountId: null,
   defaultTo: [],
   defaultSubject: "",
@@ -46,7 +55,11 @@ export const useUiStore = create<UiState>((set) => ({
   setSelectedMessageId: (id) => set({ selectedMessageId: id }),
   openReply: (params) =>
     set({
-      compose: { open: true, ...params },
+      compose: { open: true, mode: "reply", ...params },
+    }),
+  openForward: (params) =>
+    set({
+      compose: { open: true, mode: "forward", ...params },
     }),
   closeCompose: () => set({ compose: initialCompose }),
 }));

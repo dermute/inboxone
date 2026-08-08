@@ -132,3 +132,35 @@ export function useReply() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["messages"] }),
   });
 }
+
+export function useForward() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      accountId,
+      to,
+      cc,
+      bcc,
+      subject,
+      bodyHtml,
+    }: {
+      id: number;
+      accountId?: number;
+      to: string[];
+      cc?: string[];
+      bcc?: string[];
+      subject: string;
+      bodyHtml: string;
+    }) =>
+      api.post(`/api/messages/${id}/forward`, {
+        account_id: accountId,
+        to,
+        cc: cc ?? [],
+        bcc: bcc ?? [],
+        subject,
+        body_html: bodyHtml,
+      }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["messages"] }),
+  });
+}
