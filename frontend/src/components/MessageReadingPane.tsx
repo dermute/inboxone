@@ -13,6 +13,23 @@ function buildQuotedHtml(detail: { from_name: string | null; from_addr: string |
   return `<p>On ${when}, ${who} wrote:</p><blockquote style="border-left:2px solid #ccc;padding-left:10px;margin-left:0;color:#555;">${body}</blockquote>`;
 }
 
+function buildForwardedHtml(detail: {
+  subject: string | null;
+  from_name: string | null;
+  from_addr: string | null;
+  to_addrs: string[];
+  date_sent: string | null;
+  html_body: string | null;
+  text_body: string | null;
+}) {
+  const from = detail.from_name
+    ? `${detail.from_name} <${detail.from_addr ?? ""}>`
+    : (detail.from_addr ?? "");
+  const when = detail.date_sent ? new Date(detail.date_sent).toLocaleString() : "";
+  const body = detail.html_body ?? `<pre>${escapeHtml(detail.text_body ?? "")}</pre>`;
+  return `<p><br></p><p>---------- Forwarded message ---------</p><p><strong>From:</strong> ${escapeHtml(from)}<br><strong>Date:</strong> ${escapeHtml(when)}<br><strong>Subject:</strong> ${escapeHtml(detail.subject ?? "")}<br><strong>To:</strong> ${escapeHtml(detail.to_addrs.join(", "))}</p>${body}`;
+}
+
 export default function MessageReadingPane({
   summary,
   onDelete,
@@ -25,6 +42,7 @@ export default function MessageReadingPane({
 }) {
   const { data: detail, isLoading } = useMessage(summary?.id ?? null);
   const openReply = useUiStore((s) => s.openReply);
+  const openForward = useUiStore((s) => s.openForward);
 
   const srcDoc = useMemo(() => {
     if (!detail) return "";
@@ -113,22 +131,40 @@ export default function MessageReadingPane({
       )}
 
       <div className="glass-divider flex items-center justify-between border-t px-6 py-3">
-        <button
-          onClick={() =>
-            openReply({
-              replyToMessageId: summary.id,
-              defaultAccountId: summary.account_id,
-              defaultTo: detail.from_addr ? [detail.from_addr] : [],
-              defaultSubject: detail.subject?.startsWith("Re:")
-                ? detail.subject
-                : `Re: ${detail.subject ?? ""}`,
-              quotedHtml: buildQuotedHtml(detail),
-            })
-          }
-          className="glass-button-primary"
-        >
-          Reply
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() =>
+              openReply({
+                sourceMessageId: summary.id,
+                defaultAccountId: summary.account_id,
+                defaultTo: detail.from_addr ? [detail.from_addr] : [],
+                defaultSubject: detail.subject?.startsWith("Re:")
+                  ? detail.subject
+                  : `Re: ${detail.subject ?? ""}`,
+                quotedHtml: buildQuotedHtml(detail),
+              })
+            }
+            className="glass-button-primary"
+          >
+            Reply
+          </button>
+          <button
+            onClick={() =>
+              openForward({
+                sourceMessageId: summary.id,
+                defaultAccountId: summary.account_id,
+                defaultTo: [],
+                defaultSubject: /^Fwd:/i.test(detail.subject ?? "")
+                  ? (detail.subject ?? "")
+                  : `Fwd: ${detail.subject ?? ""}`,
+                quotedHtml: buildForwardedHtml(detail),
+              })
+            }
+            className="glass-button"
+          >
+            Forward
+          </button>
+        </div>
         <button onClick={() => onDelete(summary.id)} className="glass-button-danger">
           Delete
         </button>

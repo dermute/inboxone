@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useAccounts } from "../api/useAccounts";
 import { ApiError } from "../api/client";
-import { useReply } from "../api/useMessages";
+import { useForward, useReply } from "../api/useMessages";
 import { useUiStore } from "../store/uiStore";
 import ConfirmDialog from "./ConfirmDialog";
 import { XIcon } from "./icons";
@@ -22,6 +22,8 @@ export default function ComposeModal() {
   const closeCompose = useUiStore((s) => s.closeCompose);
   const { data: accounts } = useAccounts();
   const reply = useReply();
+  const forward = useForward();
+  const sendMutation = compose.mode === "forward" ? forward : reply;
 
   const [accountId, setAccountId] = useState<number | null>(null);
   const [to, setTo] = useState("");
@@ -66,7 +68,7 @@ export default function ComposeModal() {
   }
 
   async function handleSend() {
-    if (!compose.replyToMessageId || !editor) return;
+    if (!compose.sourceMessageId || !editor) return;
     const toAddrs = parseAddrs(to);
     if (toAddrs.length === 0) {
       setSendError("Add at least one recipient.");
@@ -74,8 +76,8 @@ export default function ComposeModal() {
     }
     setSendError(null);
     try {
-      await reply.mutateAsync({
-        id: compose.replyToMessageId,
+      await sendMutation.mutateAsync({
+        id: compose.sourceMessageId,
         accountId: accountId ?? undefined,
         to: toAddrs,
         cc: parseAddrs(cc),
@@ -94,9 +96,11 @@ export default function ComposeModal() {
         <Dialog.Overlay className="fixed inset-0 bg-black/20 backdrop-blur-sm" />
         <Dialog.Content className="glass-panel fixed left-1/2 top-1/2 flex h-[80vh] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden">
           <div className="glass-divider flex items-center justify-between border-b px-5 py-3">
-            <Dialog.Title className="font-medium">New message</Dialog.Title>
+            <Dialog.Title className="font-medium">
+              {compose.mode === "forward" ? "Forward message" : "Reply"}
+            </Dialog.Title>
             <Dialog.Description className="sr-only">
-              Write and send a reply to this message.
+              Write and send a {compose.mode} of this message.
             </Dialog.Description>
             <Dialog.Close
               aria-label="Close"
@@ -183,8 +187,12 @@ export default function ComposeModal() {
               <button onClick={requestClose} className="glass-button">
                 Cancel
               </button>
-              <button onClick={handleSend} disabled={reply.isPending} className="glass-button-primary">
-                {reply.isPending ? "Sending..." : "Send"}
+              <button
+                onClick={handleSend}
+                disabled={sendMutation.isPending}
+                className="glass-button-primary"
+              >
+                {sendMutation.isPending ? "Sending..." : "Send"}
               </button>
             </div>
           </div>
@@ -193,7 +201,7 @@ export default function ComposeModal() {
             open={confirmDiscard}
             onOpenChange={setConfirmDiscard}
             title="Discard draft?"
-            description="Your reply hasn't been sent and will be lost."
+            description="Your message hasn't been sent and will be lost."
             confirmLabel="Discard"
             cancelLabel="Keep editing"
             destructive

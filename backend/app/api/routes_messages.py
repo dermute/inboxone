@@ -17,6 +17,7 @@ from app.db.session import get_db
 from app.schemas.message import (
     AttachmentMeta,
     FlagsUpdate,
+    ForwardRequest,
     MessageDetail,
     MessageListPage,
     MessageOut,
@@ -356,4 +357,51 @@ async def reply(message_id: int, payload: ReplyRequest, db: AsyncSession = Depen
 
     original.is_answered = True
     await db.commit()
+    return {"sent": True}
+
+
+@router.post("/{message_id}/forward")
+async def forward(
+    message_id: int, payload: ForwardRequest, db: AsyncSession = Depends(get_db)
+) -> dict:
+    result = await db.execute(select(Message).where(Message.id == message_id))
+    original = result.scalar_one_or_none()
+    if original is None:
+        raise HTTPException(status_code=404, detail="Message not found")
+
+    send_account_id = payload.account_id or original.account_id
+    account_result = await db.execute(select(Account).where(Account.id == send_account_id))
+    account = account_result.scalar_one_or_none()
+    if account is None:
+        raise HTTPException(status_code=404, detail="Send-as account not found")
+
+    with activity.track(f"Forwarding from {account.name}..."):
+        if account.protocol == Protocol.OAUTH_MICROSOFT.value:
+            token = await get_graph_token(db, account)
+            await graph_client.send_mail(
+                access_token=token,
+                subject=payload.subject,
+                body_html=payload.body_html,
+                to=payload.to,
+                cc=payload.cc,
+                bcc=payload.bcc,
+            )
+        else:
+            mime = mail_parser.build_forward_mime(
+                from_addr=account.smtp_username,
+                to=payload.to,
+                cc=payload.cc,
+                bcc=payload.bcc,
+                subject=payload.subject,
+                body_html=payload.body_html,
+            )
+            await smtp_client.send_basic_auth(
+                mime,
+                host=account.smtp_host,
+                port=account.smtp_port,
+                use_tls=account.smtp_use_tls,
+                username=account.smtp_username,
+                password=account.smtp_password_enc,
+            )
+
     return {"sent": True}
