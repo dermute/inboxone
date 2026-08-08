@@ -6,7 +6,7 @@ from sqlalchemy.orm import load_only, selectinload
 from app.core import activity
 from app.core.security import require_session
 from app.db.models import Account, Folder, Message, Protocol
-from app.db.session import get_db
+from app.db.session import DBSession
 from app.schemas.account import (
     AccountCreateBasic,
     AccountOut,
@@ -69,7 +69,7 @@ _ACCOUNT_LIST_COLUMNS = (
 
 
 @router.get("", response_model=list[AccountOut])
-async def list_accounts(db: AsyncSession = Depends(get_db)) -> list[Account]:
+async def list_accounts(db: DBSession) -> list[Account]:
     # load_only deliberately excludes the encrypted credential/token columns - none
     # of them are in AccountOut anyway, and loading (and thus decrypting) them here
     # would let one account with an undecryptable secret break the whole listing.
@@ -94,7 +94,7 @@ async def list_accounts(db: AsyncSession = Depends(get_db)) -> list[Account]:
 
 @router.post("", response_model=AccountOut)
 async def create_account(
-    payload: AccountCreateBasic, db: AsyncSession = Depends(get_db)
+    payload: AccountCreateBasic, db: DBSession
 ) -> Account:
     account = Account(
         name=payload.name,
@@ -128,7 +128,7 @@ async def create_account(
 
 @router.put("/{account_id}", response_model=AccountOut)
 async def update_account(
-    account_id: int, payload: AccountUpdateBasic, db: AsyncSession = Depends(get_db)
+    account_id: int, payload: AccountUpdateBasic, db: DBSession
 ) -> Account:
     account = await _get_account_or_404(db, account_id)
     updates = payload.model_dump(exclude_unset=True)
@@ -146,7 +146,7 @@ async def update_account(
 
 
 @router.delete("/{account_id}")
-async def delete_account(account_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+async def delete_account(account_id: int, db: DBSession) -> dict:
     # Deliberately a raw delete-by-id rather than loading the account first: it must
     # be possible to remove an account even if its stored credentials can no longer
     # be decrypted. Folders/messages are cleaned up by the DB's ON DELETE CASCADE
@@ -160,7 +160,7 @@ async def delete_account(account_id: int, db: AsyncSession = Depends(get_db)) ->
 
 
 @router.post("/{account_id}/test-connection", response_model=TestConnectionResult)
-async def test_connection(account_id: int, db: AsyncSession = Depends(get_db)) -> TestConnectionResult:
+async def test_connection(account_id: int, db: DBSession) -> TestConnectionResult:
     account = await _get_account_or_404(db, account_id)
 
     with activity.track(f"Testing {account.name}..."):
@@ -192,7 +192,7 @@ async def test_connection(account_id: int, db: AsyncSession = Depends(get_db)) -
 
 
 @router.get("/{account_id}/folders", response_model=list[FolderOut])
-async def list_account_folders(account_id: int, db: AsyncSession = Depends(get_db)) -> list[Folder]:
+async def list_account_folders(account_id: int, db: DBSession) -> list[Folder]:
     account = await _get_account_or_404(db, account_id)
     with activity.track(f"Listing folders for {account.name}..."):
         client = await open_imap_connection(db, account)
@@ -217,7 +217,7 @@ async def list_account_folders(account_id: int, db: AsyncSession = Depends(get_d
 
 @router.put("/{account_id}/folders", response_model=list[FolderOut])
 async def update_account_folders(
-    account_id: int, payload: FolderListUpdate, db: AsyncSession = Depends(get_db)
+    account_id: int, payload: FolderListUpdate, db: DBSession
 ) -> list[Folder]:
     account = await _get_account_or_404(db, account_id)
     existing = {f.imap_path: f for f in account.folders}

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
@@ -13,7 +14,7 @@ from sqlalchemy.orm import selectinload
 from app.core import activity
 from app.core.security import require_session
 from app.db.models import Account, Message, Protocol
-from app.db.session import get_db
+from app.db.session import DBSession
 from app.schemas.message import (
     AttachmentMeta,
     FlagsUpdate,
@@ -25,6 +26,8 @@ from app.schemas.message import (
 )
 from app.services import graph_client, imap_client, mail_parser, smtp_client
 from app.services.account_connection import get_graph_token, open_imap_connection
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/messages", tags=["messages"], dependencies=[Depends(require_session)])
 
@@ -41,13 +44,13 @@ def _decode_cursor(cursor: str) -> tuple[datetime | None, int]:
 
 @router.get("", response_model=MessageListPage)
 async def list_messages(
+    db: DBSession,
     account_id: int | None = None,
     folder_id: int | None = None,
     unread_only: bool = False,
     search: str | None = Query(default=None, max_length=200),
     limit: int = 50,
     cursor: str | None = None,
-    db: AsyncSession = Depends(get_db),
 ) -> MessageListPage:
     query = select(Message).options(selectinload(Message.account))
     if account_id is not None:
@@ -105,9 +108,9 @@ async def list_messages(
 
 @router.post("/mark-all-read")
 async def mark_all_read(
+    db: DBSession,
     account_id: int | None = None,
     folder_id: int | None = None,
-    db: AsyncSession = Depends(get_db),
 ) -> dict:
     query = (
         select(Message)
@@ -135,7 +138,8 @@ async def mark_all_read(
         with activity.track(f"Marking {account.name} as read..."):
             try:
                 client = await open_imap_connection(db, account)
-            except Exception:  # noqa: BLE001 - one unreachable account shouldn't block the rest
+            except Exception:
+                logger.exception("Failed to connect to %s while marking messages read", account.name)
                 continue
             try:
                 for path, folder_messages in by_folder.items():
@@ -144,8 +148,8 @@ async def mark_all_read(
                     for m in folder_messages:
                         m.is_seen = True
                         updated += 1
-            except Exception:  # noqa: BLE001 - keep whatever folders already succeeded
-                pass
+            except Exception:
+                logger.exception("Failed to mark all messages read for %s", account.name)
             finally:
                 await asyncio.to_thread(client.logout)
 
@@ -167,7 +171,7 @@ async def _fetch_and_parse(db: AsyncSession, message: Message, mark_seen: bool) 
 
 
 @router.get("/{message_id}", response_model=MessageDetail)
-async def get_message(message_id: int, db: AsyncSession = Depends(get_db)) -> MessageDetail:
+async def get_message(message_id: int, db: DBSession) -> MessageDetail:
     result = await db.execute(
         select(Message)
         .where(Message.id == message_id)
@@ -200,7 +204,7 @@ async def get_message(message_id: int, db: AsyncSession = Depends(get_db)) -> Me
 
 
 @router.get("/{message_id}/attachments/{part_index}")
-async def get_attachment(message_id: int, part_index: str, db: AsyncSession = Depends(get_db)):
+async def get_attachment(message_id: int, part_index: str, db: DBSession):
     result = await db.execute(
         select(Message)
         .where(Message.id == message_id)
@@ -227,7 +231,7 @@ async def get_attachment(message_id: int, part_index: str, db: AsyncSession = De
 
 @router.post("/{message_id}/flags", response_model=MessageOut)
 async def update_flags(
-    message_id: int, payload: FlagsUpdate, db: AsyncSession = Depends(get_db)
+    message_id: int, payload: FlagsUpdate, db: DBSession
 ) -> Message:
     result = await db.execute(
         select(Message)
@@ -273,7 +277,7 @@ async def update_flags(
 
 
 @router.delete("/{message_id}")
-async def delete_message(message_id: int, db: AsyncSession = Depends(get_db)) -> dict:
+async def delete_message(message_id: int, db: DBSession) -> dict:
     result = await db.execute(
         select(Message)
         .where(Message.id == message_id)
@@ -306,7 +310,7 @@ async def delete_message(message_id: int, db: AsyncSession = Depends(get_db)) ->
 
 
 @router.post("/{message_id}/reply")
-async def reply(message_id: int, payload: ReplyRequest, db: AsyncSession = Depends(get_db)) -> dict:
+async def reply(message_id: int, payload: ReplyRequest, db: DBSession) -> dict:
     result = await db.execute(
         select(Message)
         .where(Message.id == message_id)
@@ -362,7 +366,7 @@ async def reply(message_id: int, payload: ReplyRequest, db: AsyncSession = Depen
 
 @router.post("/{message_id}/forward")
 async def forward(
-    message_id: int, payload: ForwardRequest, db: AsyncSession = Depends(get_db)
+    message_id: int, payload: ForwardRequest, db: DBSession
 ) -> dict:
     result = await db.execute(select(Message).where(Message.id == message_id))
     original = result.scalar_one_or_none()

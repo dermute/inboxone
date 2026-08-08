@@ -63,7 +63,7 @@ async def _refresh_all_oauth_tokens() -> None:
                 client = await open_imap_connection(db, account)
                 await _safe_logout(client)
                 await get_graph_token(db, account)
-            except Exception:  # noqa: BLE001 - one bad account must not block others
+            except Exception:
                 logger.exception("Failed refreshing OAuth token for account %s", account_id)
 
 

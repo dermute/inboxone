@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -92,55 +92,54 @@ async def _sync_folder(client, db: AsyncSession, account: Account, folder: Folde
             msg.is_flagged = b"\\Flagged" in flags
             msg.is_answered = b"\\Answered" in flags
 
-    folder.last_synced_at = datetime.now(timezone.utc)
+    folder.last_synced_at = datetime.now(UTC)
 
 
 async def sync_account(account_id: int) -> None:
-    async with _sync_semaphore:
-        async with async_session_factory() as db:
-            try:
-                result = await db.execute(
-                    select(Account)
-                    .where(Account.id == account_id, Account.is_active.is_(True))
-                    .options(selectinload(Account.folders))
+    async with _sync_semaphore, async_session_factory() as db:
+        try:
+            result = await db.execute(
+                select(Account)
+                .where(Account.id == account_id, Account.is_active.is_(True))
+                .options(selectinload(Account.folders))
+            )
+            account = result.scalar_one_or_none()
+        except Exception as exc:
+            # A stored credential may fail to decrypt if ENCRYPTION_KEY changed; record it
+            # against the account without crashing the scheduler job.
+            logger.exception("Failed to load account %s for sync", account_id)
+            await db.rollback()
+            await db.execute(
+                update(Account)
+                .where(Account.id == account_id)
+                .values(
+                    last_sync_status="error",
+                    last_sync_error=f"Failed to load account: {exc}",
+                    last_sync_at=datetime.now(UTC),
                 )
-                account = result.scalar_one_or_none()
-            except Exception as exc:  # noqa: BLE001 - e.g. a stored credential that fails to
-                # decrypt (ENCRYPTION_KEY changed since this account was added) - record it
-                # against the account without crashing the scheduler job.
-                logger.exception("Failed to load account %s for sync", account_id)
-                await db.rollback()
-                await db.execute(
-                    update(Account)
-                    .where(Account.id == account_id)
-                    .values(
-                        last_sync_status="error",
-                        last_sync_error=f"Failed to load account: {exc}",
-                        last_sync_at=datetime.now(timezone.utc),
-                    )
-                )
-                await db.commit()
-                return
+            )
+            await db.commit()
+            return
 
-            if account is None:
-                return
+        if account is None:
+            return
 
-            try:
-                with activity.track(f"Syncing {account.name}..."):
-                    client = await open_imap_connection(db, account)
-                    try:
-                        for folder in account.folders:
-                            if folder.sync_enabled:
-                                await _sync_folder(client, db, account, folder)
-                    finally:
-                        await asyncio.to_thread(client.logout)
+        try:
+            with activity.track(f"Syncing {account.name}..."):
+                client = await open_imap_connection(db, account)
+                try:
+                    for folder in account.folders:
+                        if folder.sync_enabled:
+                            await _sync_folder(client, db, account, folder)
+                finally:
+                    await asyncio.to_thread(client.logout)
 
-                account.last_sync_status = "ok"
-                account.last_sync_error = None
-            except Exception as exc:  # noqa: BLE001 - recorded per-account, must not crash the scheduler
-                logger.exception("Sync failed for account %s", account_id)
-                account.last_sync_status = "error"
-                account.last_sync_error = str(exc)
-            finally:
-                account.last_sync_at = datetime.now(timezone.utc)
-                await db.commit()
+            account.last_sync_status = "ok"
+            account.last_sync_error = None
+        except Exception as exc:
+            logger.exception("Sync failed for account %s", account_id)
+            account.last_sync_status = "error"
+            account.last_sync_error = str(exc)
+        finally:
+            account.last_sync_at = datetime.now(UTC)
+            await db.commit()
