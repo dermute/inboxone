@@ -1,10 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import require_session
 from app.db.models import Account, Folder, Protocol
-from app.db.session import get_db
+from app.db.session import DBSession
 from app.schemas.oauth import (
     MicrosoftOAuthPollResponse,
     MicrosoftOAuthStart,
@@ -36,7 +35,7 @@ async def start(payload: MicrosoftOAuthStart) -> MicrosoftOAuthStartResponse:
 
 
 @router.post("/reconnect/{account_id}", response_model=MicrosoftOAuthStartResponse)
-async def reconnect(account_id: int, db: AsyncSession = Depends(get_db)) -> MicrosoftOAuthStartResponse:
+async def reconnect(account_id: int, db: DBSession) -> MicrosoftOAuthStartResponse:
     result = await db.execute(select(Account).where(Account.id == account_id))
     account = result.scalar_one_or_none()
     if account is None:
@@ -50,7 +49,7 @@ async def reconnect(account_id: int, db: AsyncSession = Depends(get_db)) -> Micr
 
 
 @router.get("/poll/{flow_id}", response_model=MicrosoftOAuthPollResponse)
-async def poll(flow_id: str, db: AsyncSession = Depends(get_db)) -> MicrosoftOAuthPollResponse:
+async def poll(flow_id: str, db: DBSession) -> MicrosoftOAuthPollResponse:
     result = oauth_microsoft.poll_device_flow(flow_id)
 
     if result["status"] != "complete":

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime
 from sqlalchemy.types import TypeDecorator
@@ -28,12 +28,12 @@ class UTCDateTime(TypeDecorator):
         if value is None:
             return None
         if value.tzinfo is not None:
-            value = value.astimezone(timezone.utc)
+            value = value.astimezone(UTC)
         return value.replace(tzinfo=None)
 
     def process_result_value(self, value: datetime | None, dialect) -> datetime | None:
         if value is None:
             return None
         if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
+            return value.replace(tzinfo=UTC)
         return value

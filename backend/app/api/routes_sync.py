@@ -2,12 +2,11 @@ import asyncio
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core import activity
 from app.core.security import require_session
 from app.db.models import Account
-from app.db.session import get_db
+from app.db.session import DBSession
 from app.sync.worker import sync_account
 
 router = APIRouter(prefix="/api/sync", tags=["sync"], dependencies=[Depends(require_session)])
@@ -30,7 +29,7 @@ def _spawn_sync(account_id: int) -> None:
 
 
 @router.post("/trigger")
-async def trigger_sync(account_id: int | None = None, db: AsyncSession = Depends(get_db)) -> dict:
+async def trigger_sync(db: DBSession, account_id: int | None = None) -> dict:
     # Returns as soon as the syncs are queued rather than awaiting them: a full sync
     # across several accounts can take minutes, far longer than a browser or reverse
     # proxy will hold a request open. Callers watch /api/sync/activity for progress.
@@ -48,7 +47,7 @@ async def trigger_sync(account_id: int | None = None, db: AsyncSession = Depends
 
 
 @router.get("/status")
-async def sync_status(db: AsyncSession = Depends(get_db)) -> list[dict]:
+async def sync_status(db: DBSession) -> list[dict]:
     # Select only plain columns - this view never needs credentials, and loading
     # full Account rows would decrypt them just to discard the values, needlessly
     # failing the whole endpoint if any one account's stored secret is undecryptable.
