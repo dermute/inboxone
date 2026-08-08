@@ -12,6 +12,10 @@ export default function MessageList({
   onLoadMore,
   hasMore,
   isLoading,
+  searchQuery,
+  onSearchQueryChange,
+  unreadOnly,
+  onUnreadOnlyChange,
   onMarkRead,
   onMarkAllRead,
   markAllPending,
@@ -24,6 +28,10 @@ export default function MessageList({
   onLoadMore: () => void;
   hasMore: boolean;
   isLoading: boolean;
+  searchQuery: string;
+  onSearchQueryChange: (query: string) => void;
+  unreadOnly: boolean;
+  onUnreadOnlyChange: (enabled: boolean) => void;
   onMarkRead: (id: number, seen: boolean) => void;
   onMarkAllRead: () => void;
   markAllPending: boolean;
@@ -84,7 +92,7 @@ export default function MessageList({
 
   return (
     <div className="flex h-full flex-col">
-      <div className="glass-divider flex shrink-0 items-center border-b px-4 py-2">
+      <div className="glass-divider flex shrink-0 items-center gap-2 border-b px-4 py-2">
         <button
           onClick={onOpenRail}
           aria-label="Open accounts and folders"
@@ -92,10 +100,31 @@ export default function MessageList({
         >
           <MenuIcon />
         </button>
+        <label htmlFor="message-search" className="sr-only">
+          Search messages
+        </label>
+        <input
+          id="message-search"
+          type="search"
+          value={searchQuery}
+          onChange={(event) => onSearchQueryChange(event.target.value)}
+          placeholder="Search"
+          maxLength={200}
+          className="input min-w-0 flex-1 py-1.5 text-sm"
+        />
+        <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-gray-600 dark:text-gray-300">
+          <input
+            type="checkbox"
+            checked={unreadOnly}
+            onChange={(event) => onUnreadOnlyChange(event.target.checked)}
+            className="h-3.5 w-3.5 accent-indigo-600"
+          />
+          Unread
+        </label>
         <button
           onClick={onMarkAllRead}
           disabled={!hasUnread || markAllPending}
-          className="ml-auto text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:cursor-default disabled:text-gray-400 dark:text-indigo-400 dark:hover:text-indigo-300 dark:disabled:text-gray-600"
+          className="shrink-0 text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:cursor-default disabled:text-gray-400 dark:text-indigo-400 dark:hover:text-indigo-300 dark:disabled:text-gray-600"
         >
           Mark all as read
         </button>
@@ -119,7 +148,9 @@ export default function MessageList({
         </div>
       ) : messages.length === 0 ? (
         <div className="flex flex-1 items-center justify-center px-8 text-center text-sm text-gray-600 dark:text-gray-300">
-          No messages yet - accounts sync automatically in the background.
+          {searchQuery || unreadOnly
+            ? "No messages match these filters."
+            : "No messages yet - accounts sync automatically in the background."}
         </div>
       ) : (
         <ul

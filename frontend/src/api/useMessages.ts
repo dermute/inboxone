@@ -7,6 +7,7 @@ interface MessageFilters {
   accountId?: number | null;
   folderId?: number | null;
   unreadOnly?: boolean;
+  search?: string;
 }
 
 function buildQuery(filters: MessageFilters, cursor?: string | null) {
@@ -14,6 +15,7 @@ function buildQuery(filters: MessageFilters, cursor?: string | null) {
   if (filters.accountId) params.set("account_id", String(filters.accountId));
   if (filters.folderId) params.set("folder_id", String(filters.folderId));
   if (filters.unreadOnly) params.set("unread_only", "true");
+  if (filters.search) params.set("search", filters.search);
   if (cursor) params.set("cursor", cursor);
   return params.toString();
 }

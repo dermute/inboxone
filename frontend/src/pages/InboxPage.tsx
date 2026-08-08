@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useAccounts } from "../api/useAccounts";
 import { ApiError } from "../api/client";
@@ -38,7 +38,21 @@ export default function InboxPage() {
     setSelectedFolderId(folderId);
   }
 
-  const messagesQuery = useMessages({ accountId: selectedAccountId, folderId: selectedFolderId });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [unreadOnly, setUnreadOnly] = useState(false);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
+
+  const messagesQuery = useMessages({
+    accountId: selectedAccountId,
+    folderId: selectedFolderId,
+    unreadOnly,
+    search: debouncedSearch,
+  });
   const updateFlags = useUpdateFlags();
   const markAllRead = useMarkAllRead();
   const deleteMessage = useDeleteMessage();
@@ -136,6 +150,16 @@ export default function InboxPage() {
           onLoadMore={() => messagesQuery.fetchNextPage()}
           hasMore={!!messagesQuery.hasNextPage}
           isLoading={messagesQuery.isLoading}
+          searchQuery={searchQuery}
+          onSearchQueryChange={(query) => {
+            setSearchQuery(query);
+            setSelectedMessageId(null);
+          }}
+          unreadOnly={unreadOnly}
+          onUnreadOnlyChange={(enabled) => {
+            setUnreadOnly(enabled);
+            setSelectedMessageId(null);
+          }}
           onMarkRead={(id, seen) => updateFlags.mutate({ id, seen })}
           onMarkAllRead={() =>
             markAllRead.mutate({ accountId: selectedAccountId, folderId: selectedFolderId })
