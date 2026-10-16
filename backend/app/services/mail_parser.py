@@ -4,7 +4,7 @@ import json
 from email.message import EmailMessage, Message
 from email.parser import BytesHeaderParser, BytesParser
 from email.policy import default as default_policy
-from email.utils import getaddresses, parseaddr, parsedate_to_datetime
+from email.utils import formatdate, getaddresses, make_msgid, parseaddr, parsedate_to_datetime
 
 
 def parse_header_block(header_bytes: bytes) -> dict:
@@ -101,6 +101,8 @@ def build_reply_mime(
     if bcc:
         msg["Bcc"] = ", ".join(bcc)
     msg["Subject"] = subject
+    msg["Date"] = formatdate(localtime=False, usegmt=True)
+    msg["Message-ID"] = make_msgid()
 
     if original_message_id:
         msg["In-Reply-To"] = original_message_id

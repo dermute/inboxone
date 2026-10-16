@@ -30,6 +30,7 @@ export default function ComposeModal() {
   const [cc, setCc] = useState("");
   const [subject, setSubject] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
+  const [sendWarning, setSendWarning] = useState<string | null>(null);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const dirtyRef = useRef(false);
 
@@ -48,6 +49,7 @@ export default function ComposeModal() {
     setCc("");
     setSubject(compose.defaultSubject);
     setSendError(null);
+    setSendWarning(null);
     setConfirmDiscard(false);
     // setContent doesn't emit an update event, so this doesn't mark the draft dirty.
     editor?.commands.setContent(`<p></p>${compose.quotedHtml}`);
@@ -68,7 +70,7 @@ export default function ComposeModal() {
   }
 
   async function handleSend() {
-    if (!compose.sourceMessageId || !editor) return;
+    if (!compose.sourceMessageId || !editor || sendWarning || sendMutation.isPending) return;
     const toAddrs = parseAddrs(to);
     if (toAddrs.length === 0) {
       setSendError("Add at least one recipient.");
@@ -76,7 +78,7 @@ export default function ComposeModal() {
     }
     setSendError(null);
     try {
-      await sendMutation.mutateAsync({
+      const result = await sendMutation.mutateAsync({
         id: compose.sourceMessageId,
         accountId: accountId ?? undefined,
         to: toAddrs,
@@ -84,7 +86,12 @@ export default function ComposeModal() {
         subject,
         bodyHtml: editor.getHTML(),
       });
-      closeCompose();
+      dirtyRef.current = false;
+      if (result.warning) {
+        setSendWarning(result.warning);
+      } else {
+        closeCompose();
+      }
     } catch (err) {
       setSendError(err instanceof ApiError ? err.message : "Failed to send - try again.");
     }
@@ -97,7 +104,7 @@ export default function ComposeModal() {
         <Dialog.Content className="glass-panel fixed left-1/2 top-1/2 flex h-[80vh] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden">
           <div className="glass-divider flex items-center justify-between border-b px-5 py-3">
             <Dialog.Title className="font-medium">
-              {compose.mode === "forward" ? "Forward message" : "Reply"}
+              {sendWarning ? "Message sent" : compose.mode === "forward" ? "Forward message" : "Reply"}
             </Dialog.Title>
             <Dialog.Description className="sr-only">
               Write and send a {compose.mode} of this message.
@@ -110,74 +117,82 @@ export default function ComposeModal() {
             </Dialog.Close>
           </div>
 
-          <div className="space-y-2 px-5 py-3">
-            <div className="flex items-center gap-2 text-sm">
-              <label htmlFor="compose-from" className="w-16 text-gray-600 dark:text-gray-400">
-                From
-              </label>
-              <select
-                id="compose-from"
-                value={accountId ?? ""}
-                onChange={(e) => {
-                  setAccountId(Number(e.target.value));
-                  markDirty();
-                }}
-                className="input flex-1"
-              >
-                {accounts?.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
+          {sendWarning ? (
+            <div role="alert" className="flex-1 px-5 py-4 text-sm">
+              {sendWarning}
             </div>
-            <div className="flex items-center gap-2 text-sm">
-              <label htmlFor="compose-to" className="w-16 text-gray-600 dark:text-gray-400">
-                To
-              </label>
-              <input
-                id="compose-to"
-                value={to}
-                onChange={(e) => {
-                  setTo(e.target.value);
-                  markDirty();
-                }}
-                className="input flex-1"
-              />
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <label htmlFor="compose-cc" className="w-16 text-gray-600 dark:text-gray-400">
-                Cc
-              </label>
-              <input
-                id="compose-cc"
-                value={cc}
-                onChange={(e) => {
-                  setCc(e.target.value);
-                  markDirty();
-                }}
-                className="input flex-1"
-              />
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <label htmlFor="compose-subject" className="w-16 text-gray-600 dark:text-gray-400">
-                Subject
-              </label>
-              <input
-                id="compose-subject"
-                value={subject}
-                onChange={(e) => {
-                  setSubject(e.target.value);
-                  markDirty();
-                }}
-                className="input flex-1"
-              />
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="space-y-2 px-5 py-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <label htmlFor="compose-from" className="w-16 text-gray-600 dark:text-gray-400">
+                    From
+                  </label>
+                  <select
+                    id="compose-from"
+                    value={accountId ?? ""}
+                    onChange={(e) => {
+                      setAccountId(Number(e.target.value));
+                      markDirty();
+                    }}
+                    className="input flex-1"
+                  >
+                    {accounts?.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <label htmlFor="compose-to" className="w-16 text-gray-600 dark:text-gray-400">
+                    To
+                  </label>
+                  <input
+                    id="compose-to"
+                    value={to}
+                    onChange={(e) => {
+                      setTo(e.target.value);
+                      markDirty();
+                    }}
+                    className="input flex-1"
+                  />
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <label htmlFor="compose-cc" className="w-16 text-gray-600 dark:text-gray-400">
+                    Cc
+                  </label>
+                  <input
+                    id="compose-cc"
+                    value={cc}
+                    onChange={(e) => {
+                      setCc(e.target.value);
+                      markDirty();
+                    }}
+                    className="input flex-1"
+                  />
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <label htmlFor="compose-subject" className="w-16 text-gray-600 dark:text-gray-400">
+                    Subject
+                  </label>
+                  <input
+                    id="compose-subject"
+                    value={subject}
+                    onChange={(e) => {
+                      setSubject(e.target.value);
+                      markDirty();
+                    }}
+                    className="input flex-1"
+                  />
+                </div>
+              </div>
 
-          <div className="flex-1 overflow-y-auto glass-divider border-t px-5 py-3">
-            <EditorContent editor={editor} className="prose prose-sm max-w-none dark:prose-invert" />
-          </div>
+              <div className="flex-1 overflow-y-auto glass-divider border-t px-5 py-3">
+                <EditorContent editor={editor} className="prose prose-sm max-w-none dark:prose-invert" />
+              </div>
+            </>
+          )}
 
           <div className="glass-divider flex items-center justify-between gap-2 border-t px-5 py-3">
             <p role="alert" className="min-w-0 truncate text-sm text-red-600 dark:text-red-400">
@@ -185,15 +200,17 @@ export default function ComposeModal() {
             </p>
             <div className="flex shrink-0 gap-2">
               <button onClick={requestClose} className="glass-button">
-                Cancel
+                {sendWarning ? "Close" : "Cancel"}
               </button>
-              <button
-                onClick={handleSend}
-                disabled={sendMutation.isPending}
-                className="glass-button-primary"
-              >
-                {sendMutation.isPending ? "Sending..." : "Send"}
-              </button>
+              {!sendWarning && (
+                <button
+                  onClick={handleSend}
+                  disabled={sendMutation.isPending}
+                  className="glass-button-primary"
+                >
+                  {sendMutation.isPending ? "Sending..." : "Send"}
+                </button>
+              )}
             </div>
           </div>
 

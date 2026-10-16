@@ -125,6 +125,10 @@ old one - no need to touch `.env` or restart anything.
   `ENCRYPTION_KEY` and decrypted in memory when needed for a connection.
 - Deleting a message moves it to the account's Trash or Deleted Items folder on the
   provider; inboxone does not permanently erase it.
+- Sent replies and forwards are saved in the sending account's Sent folder at the
+  provider. SMTP accounts use IMAP to save the copy; Gmail and Microsoft accounts
+  use their provider's automatic Sent storage. If a message is sent but saving its
+  copy fails, inboxone displays a warning so you do not accidentally send it again.
 
 ## Building from source
 

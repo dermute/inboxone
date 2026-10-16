@@ -24,7 +24,7 @@ from app.schemas.message import (
     MessageOut,
     ReplyRequest,
 )
-from app.services import graph_client, imap_client, mail_parser, smtp_client
+from app.services import graph_client, imap_client, mail_parser, outgoing_mail
 from app.services.account_connection import get_graph_token, open_imap_connection
 
 logger = logging.getLogger(__name__)
@@ -326,6 +326,7 @@ async def reply(message_id: int, payload: ReplyRequest, db: DBSession) -> dict:
     if account is None:
         raise HTTPException(status_code=404, detail="Send-as account not found")
 
+    warning = None
     with activity.track(f"Sending from {account.name}..."):
         if account.protocol == Protocol.OAUTH_MICROSOFT.value:
             token = await get_graph_token(db, account)
@@ -350,18 +351,11 @@ async def reply(message_id: int, payload: ReplyRequest, db: DBSession) -> dict:
                 original_message_id=original.message_id_header,
                 original_references=original.references,
             )
-            await smtp_client.send_basic_auth(
-                mime,
-                host=account.smtp_host,
-                port=account.smtp_port,
-                use_tls=account.smtp_use_tls,
-                username=account.smtp_username,
-                password=account.smtp_password_enc,
-            )
+            warning = await outgoing_mail.send_smtp_and_save(db, account, mime)
 
     original.is_answered = True
     await db.commit()
-    return {"sent": True}
+    return {"sent": True, "warning": warning}
 
 
 @router.post("/{message_id}/forward")
@@ -379,6 +373,7 @@ async def forward(
     if account is None:
         raise HTTPException(status_code=404, detail="Send-as account not found")
 
+    warning = None
     with activity.track(f"Forwarding from {account.name}..."):
         if account.protocol == Protocol.OAUTH_MICROSOFT.value:
             token = await get_graph_token(db, account)
@@ -399,13 +394,6 @@ async def forward(
                 subject=payload.subject,
                 body_html=payload.body_html,
             )
-            await smtp_client.send_basic_auth(
-                mime,
-                host=account.smtp_host,
-                port=account.smtp_port,
-                use_tls=account.smtp_use_tls,
-                username=account.smtp_username,
-                password=account.smtp_password_enc,
-            )
+            warning = await outgoing_mail.send_smtp_and_save(db, account, mime)
 
-    return {"sent": True}
+    return {"sent": True, "warning": warning}
