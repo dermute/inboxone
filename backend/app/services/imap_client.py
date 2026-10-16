@@ -88,6 +88,31 @@ def find_trash_folder(client: IMAPClient) -> str | None:
     return client.find_special_folder(b"\\Trash")
 
 
+def ensure_sent_folder(client: IMAPClient) -> str:
+    # Prefer SPECIAL-USE \Sent (including localized folder names), then the
+    # common names and personal namespaces handled by IMAPClient.
+    path = client.find_special_folder(b"\\Sent")
+    if path is not None:
+        return path
+
+    prefix = ""
+    if client.has_capability("NAMESPACE"):
+        personal = client.namespace().personal
+        if personal:
+            prefix = personal[0][0]
+    path = prefix + "Sent"
+    client.create_folder(path)
+    return path
+
+
+def append_sent_message(client: IMAPClient, path: str, raw: bytes, message_id: str) -> None:
+    # Some SMTP providers also file a copy. Avoid appending it again if it is
+    # already visible; the same Message-ID is used for SMTP and IMAP.
+    client.select_folder(path, readonly=True)
+    if not client.search(["HEADER", "Message-ID", message_id]):
+        client.append(path, raw, flags=[b"\\Seen"])
+
+
 def move_to_trash(client: IMAPClient, source_path: str, uid: int, trash_path: str) -> None:
     # COPY + STORE \Deleted + EXPUNGE rather than the MOVE extension (RFC 6851) -
     # not every IMAP server supports MOVE, but these three are baseline IMAP4rev1.

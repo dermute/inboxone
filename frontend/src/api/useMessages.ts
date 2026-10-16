@@ -3,6 +3,11 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { api } from "./client";
 import type { MessageDetail, MessageListPage } from "./types";
 
+interface SendResult {
+  sent: boolean;
+  warning: string | null;
+}
+
 interface MessageFilters {
   accountId?: number | null;
   folderId?: number | null;
@@ -121,7 +126,7 @@ export function useReply() {
       subject: string;
       bodyHtml: string;
     }) =>
-      api.post(`/api/messages/${id}/reply`, {
+      api.post<SendResult>(`/api/messages/${id}/reply`, {
         account_id: accountId,
         to,
         cc: cc ?? [],
@@ -153,7 +158,7 @@ export function useForward() {
       subject: string;
       bodyHtml: string;
     }) =>
-      api.post(`/api/messages/${id}/forward`, {
+      api.post<SendResult>(`/api/messages/${id}/forward`, {
         account_id: accountId,
         to,
         cc: cc ?? [],
