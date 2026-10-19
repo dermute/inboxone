@@ -20,6 +20,8 @@ attachments are fetched on demand and are not persisted.
 - A single app-wide password gate protects the whole UI.
 - Modern three-pane UI (filter rail / message list / reading pane), not an old-school
   webmail look.
+- Installable as a desktop app in Microsoft Edge and Chrome, with its own window
+  and app icon.
 
 ## Architecture (brief)
 
@@ -64,6 +66,33 @@ attachments are fetched on demand and are not persisted.
    ```
 5. Open `http://localhost:8000`, log in with `APP_PASSWORD`, and add your accounts
    under Settings.
+
+## Install as a Windows app
+
+1. Open inboxone in Microsoft Edge or Google Chrome using **HTTPS** (or
+   `http://localhost:8000` on the same PC that runs inboxone). Plain HTTP on a LAN
+   IP address or hostname does not support PWA installation.
+2. Log in and click **Install InboxOne** above Settings when your browser offers
+   installation, or use the browser's install icon in the address bar. The sidebar
+   button only appears when the browser makes installation available. In Edge,
+   you can also use **More tools → Apps → Install this site as an app**.
+3. Launch the installed app, then right-click its Windows taskbar icon and choose
+   **Pin to taskbar**.
+
+The installed app uses the same server and loads the current website when opened;
+updates do not require reinstalling. It requires a network connection and does not
+cache mail for offline use.
+
+To enable new-mail notifications, click the **bell button** in inboxone and allow
+notifications in the browser's permission prompt. Windows notifications must also
+be enabled for the browser/app. Keep inboxone open (minimized is fine) to receive
+notifications; closing all its windows and tabs stops the current notification
+watcher. Installation does not add background push notifications. Delivery timing
+depends on mail polling and browser background activity limits.
+
+The PNG app icons are generated from the envelope artwork in
+`frontend/public/favicon.svg`. After changing its geometry, regenerate them with
+`python3 frontend/scripts/generate-icons.py` (no additional dependencies).
 
 ## Adding accounts
 

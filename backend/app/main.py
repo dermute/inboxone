@@ -43,5 +43,7 @@ if STATIC_DIR.exists():
     async def spa_fallback(full_path: str):
         candidate = STATIC_DIR / full_path
         if full_path and candidate.is_file():
+            if candidate.suffix == ".webmanifest":
+                return FileResponse(candidate, media_type="application/manifest+json")
             return FileResponse(candidate)
         return FileResponse(STATIC_DIR / "index.html")
