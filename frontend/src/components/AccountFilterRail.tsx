@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import type { Account } from "../api/types";
 import { toast } from "../store/toastStore";
 import { ChevronRightIcon } from "./icons";
+import InstallAppButton from "./InstallAppButton";
 import NotificationToggle from "./NotificationToggle";
 import ThemeToggle from "./ThemeToggle";
 
@@ -148,6 +149,7 @@ export default function AccountFilterRail({
             <NotificationToggle />
           </div>
         </div>
+        <InstallAppButton />
         <Link
           to="/settings/accounts"
           onClick={onNavigate}
