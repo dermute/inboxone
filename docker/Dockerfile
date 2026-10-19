@@ -7,7 +7,7 @@ RUN npm install
 COPY frontend/ ./
 RUN npm run build
 
-FROM python:3.12-slim AS runtime
+FROM python:3-alpine AS runtime
 WORKDIR /app
 
 COPY backend/ /app/backend/
