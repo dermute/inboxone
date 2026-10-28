@@ -29,11 +29,13 @@ export default function InboxPage() {
   const setSelectedMessageId = useUiStore((s) => s.setSelectedMessageId);
 
   function selectAccount(id: number | null) {
+    setSelectedMessageId(null);
     setSelectedAccountId(id);
     setSelectedFolderId(null);
   }
 
   function selectFolder(accountId: number, folderId: number | null) {
+    setSelectedMessageId(null);
     setSelectedAccountId(accountId);
     setSelectedFolderId(folderId);
   }
@@ -67,7 +69,13 @@ export default function InboxPage() {
       ),
     [messagesQuery.data, pendingDeleteIds]
   );
-  const selectedSummary = messages.find((m) => m.id === selectedMessageId) ?? null;
+  useEffect(() => {
+    if (selectedFolderId !== null && accounts && !accounts.some((account) =>
+      account.folders.some((folder) => folder.id === selectedFolderId))) {
+      setSelectedFolderId(null);
+      setSelectedMessageId(null);
+    }
+  }, [accounts, selectedFolderId, setSelectedFolderId, setSelectedMessageId]);
 
   function removePending(id: number) {
     setPendingDeleteIds((prev) => {
@@ -175,7 +183,7 @@ export default function InboxPage() {
         }`}
       >
         <MessageReadingPane
-          summary={selectedSummary}
+          messageId={selectedMessageId}
           onDelete={handleDelete}
           onBack={() => setSelectedMessageId(null)}
         />

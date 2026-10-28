@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 
+import { useAccounts } from "../api/useAccounts";
 import { useRecentUnread } from "../api/useMessages";
 import type { MessageSummary } from "../api/types";
 import { navigationRef } from "../store/navigation";
@@ -17,7 +18,7 @@ function notifyNewMessage(message: MessageSummary): void {
     navigationRef.current?.("/inbox");
     const ui = useUiStore.getState();
     ui.setSelectedAccountId(message.account_id);
-    ui.setSelectedFolderId(null);
+    ui.setSelectedFolderId(message.folder_id);
     ui.setSelectedMessageId(message.id);
     window.focus();
     notification.close();
@@ -29,10 +30,18 @@ function notifyNewMessage(message: MessageSummary): void {
 // anything that wasn't there on the previous poll.
 export default function NewMailWatcher() {
   const enabled = useNotificationStore((s) => s.enabled);
-  const { data } = useRecentUnread();
+  const { data: accounts } = useAccounts();
+  const membership = accounts?.flatMap((account) => account.folders
+    .filter((folder) => folder.is_inbox).map((folder) => folder.id)).sort((a, b) => a - b).join(",") ?? "";
+  const { data } = useRecentUnread(membership);
+  const previousMembership = useRef(membership);
   const seenIds = useRef<Set<number> | null>(null);
 
   useEffect(() => {
+    if (previousMembership.current !== membership) {
+      seenIds.current = null;
+      previousMembership.current = membership;
+    }
     if (!data) return;
     const currentIds = new Set(data.items.map((m) => m.id));
 
@@ -55,7 +64,7 @@ export default function NewMailWatcher() {
     }
 
     seenIds.current = currentIds;
-  }, [data, enabled]);
+  }, [data, enabled, membership]);
 
   return null;
 }

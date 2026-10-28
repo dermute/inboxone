@@ -2,7 +2,8 @@ export interface Folder {
   id: number;
   imap_path: string;
   display_name: string | null;
-  sync_enabled: boolean;
+  is_inbox: boolean;
+  history_complete: boolean;
   last_synced_at: string | null;
   unread_count: number;
 }
@@ -87,6 +88,10 @@ export interface AttachmentMeta {
 
 export interface MessageDetail {
   id: number;
+  account_id: number;
+  account_name: string;
+  account_color: string;
+  folder_id: number;
   subject: string | null;
   from_name: string | null;
   from_addr: string | null;

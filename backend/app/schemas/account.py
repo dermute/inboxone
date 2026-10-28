@@ -7,7 +7,8 @@ class FolderOut(BaseModel):
     id: int
     imap_path: str
     display_name: str | None
-    sync_enabled: bool
+    is_inbox: bool
+    history_complete: bool
     last_synced_at: datetime | None
     unread_count: int = 0
 
@@ -16,7 +17,7 @@ class FolderOut(BaseModel):
 
 class FolderSelection(BaseModel):
     imap_path: str
-    sync_enabled: bool = True
+    is_inbox: bool
     display_name: str | None = None
 
 

@@ -91,7 +91,7 @@ async def poll(flow_id: str, db: DBSession) -> MicrosoftOAuthPollResponse:
     await db.commit()
     await db.refresh(account)
 
-    db.add(Folder(account_id=account.id, imap_path="INBOX", display_name="Inbox"))
+    db.add(Folder(account_id=account.id, imap_path="INBOX", display_name="Inbox", is_inbox=True))
     await db.commit()
 
     schedule_account_sync(account.id)

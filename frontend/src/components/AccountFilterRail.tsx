@@ -18,7 +18,7 @@ function UnreadBadge({ count }: { count: number }) {
 }
 
 function accountUnreadCount(account: Account): number {
-  return account.folders.reduce((sum, f) => sum + f.unread_count, 0);
+  return account.folders.reduce((sum, f) => sum + (f.is_inbox ? f.unread_count : 0), 0);
 }
 
 export default function AccountFilterRail({
@@ -64,6 +64,7 @@ export default function AccountFilterRail({
           }`}
         >
           All inboxes
+          <UnreadBadge count={accounts.reduce((sum, account) => sum + accountUnreadCount(account), 0)} />
         </button>
         {accounts.map((account) => {
           const isExpanded = !!expanded[account.id];
@@ -128,6 +129,7 @@ export default function AccountFilterRail({
                       }`}
                     >
                       <span className="truncate">{folder.display_name || folder.imap_path}</span>
+                      {folder.is_inbox && <span className="text-xs text-gray-500" title="Included in inbox">Inbox</span>}
                       <UnreadBadge count={folder.unread_count} />
                     </button>
                   ))}

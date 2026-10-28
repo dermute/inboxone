@@ -71,7 +71,7 @@ export default function TabUnreadIndicator() {
 
   useEffect(() => {
     const total = (accounts ?? []).reduce(
-      (sum, account) => sum + account.folders.reduce((s, f) => s + f.unread_count, 0),
+      (sum, account) => sum + account.folders.reduce((s, f) => s + (f.is_inbox ? f.unread_count : 0), 0),
       0
     );
     document.title = total > 0 ? `(${total}) inboxone` : "inboxone";

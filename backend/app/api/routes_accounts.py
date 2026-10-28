@@ -15,7 +15,7 @@ from app.schemas.account import (
     FolderOut,
     TestConnectionResult,
 )
-from app.services import imap_client, smtp_client
+from app.services import smtp_client
 from app.services.account_connection import open_imap_connection
 
 router = APIRouter(
@@ -74,8 +74,7 @@ async def list_accounts(db: DBSession) -> list[Account]:
     # of them are in AccountOut anyway, and loading (and thus decrypting) them here
     # would let one account with an undecryptable secret break the whole listing.
     result = await db.execute(
-        select(Account)
-        .options(load_only(*_ACCOUNT_LIST_COLUMNS), selectinload(Account.folders))
+        select(Account).options(load_only(*_ACCOUNT_LIST_COLUMNS), selectinload(Account.folders))
     )
     accounts = list(result.scalars().all())
 
@@ -93,9 +92,7 @@ async def list_accounts(db: DBSession) -> list[Account]:
 
 
 @router.post("", response_model=AccountOut)
-async def create_account(
-    payload: AccountCreateBasic, db: DBSession
-) -> Account:
+async def create_account(payload: AccountCreateBasic, db: DBSession) -> Account:
     account = Account(
         name=payload.name,
         color=payload.color,
@@ -116,8 +113,8 @@ async def create_account(
     await db.commit()
     await db.refresh(account, attribute_names=["folders"])
 
-    # Default to syncing INBOX until the user picks specific folders.
-    inbox = Folder(account_id=account.id, imap_path="INBOX", display_name="Inbox")
+    # Discovery adds all other selectable folders during the first sync.
+    inbox = Folder(account_id=account.id, imap_path="INBOX", display_name="Inbox", is_inbox=True)
     db.add(inbox)
     await db.commit()
     await db.refresh(account, attribute_names=["folders"])
@@ -127,9 +124,7 @@ async def create_account(
 
 
 @router.put("/{account_id}", response_model=AccountOut)
-async def update_account(
-    account_id: int, payload: AccountUpdateBasic, db: DBSession
-) -> Account:
+async def update_account(account_id: int, payload: AccountUpdateBasic, db: DBSession) -> Account:
     account = await _get_account_or_404(db, account_id)
     updates = payload.model_dump(exclude_unset=True)
     for key, value in updates.items():
@@ -194,24 +189,6 @@ async def test_connection(account_id: int, db: DBSession) -> TestConnectionResul
 @router.get("/{account_id}/folders", response_model=list[FolderOut])
 async def list_account_folders(account_id: int, db: DBSession) -> list[Folder]:
     account = await _get_account_or_404(db, account_id)
-    with activity.track(f"Listing folders for {account.name}..."):
-        client = await open_imap_connection(db, account)
-        try:
-            import asyncio
-
-            remote_paths = await asyncio.to_thread(imap_client.list_folders, client)
-        finally:
-            client.logout()
-
-    existing = {f.imap_path: f for f in account.folders}
-    changed = False
-    for path in remote_paths:
-        if path not in existing:
-            db.add(Folder(account_id=account.id, imap_path=path, display_name=path, sync_enabled=False))
-            changed = True
-    if changed:
-        await db.commit()
-        await db.refresh(account, attribute_names=["folders"])
     return account.folders
 
 
@@ -221,12 +198,11 @@ async def update_account_folders(
 ) -> list[Folder]:
     account = await _get_account_or_404(db, account_id)
     existing = {f.imap_path: f for f in account.folders}
+    if any(selection.imap_path not in existing for selection in payload.folders):
+        raise HTTPException(status_code=404, detail="Folder not found")
     for selection in payload.folders:
-        folder = existing.get(selection.imap_path)
-        if folder is None:
-            folder = Folder(account_id=account.id, imap_path=selection.imap_path)
-            db.add(folder)
-        folder.sync_enabled = selection.sync_enabled
+        folder = existing[selection.imap_path]
+        folder.is_inbox = selection.is_inbox
         if selection.display_name:
             folder.display_name = selection.display_name
     await db.commit()

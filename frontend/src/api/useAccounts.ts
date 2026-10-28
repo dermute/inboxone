@@ -47,17 +47,19 @@ export function useAccountFolders(accountId: number | null) {
     queryKey: ["accounts", accountId, "folders"],
     queryFn: () => api.get<Folder[]>(`/api/accounts/${accountId}/folders`),
     enabled: accountId !== null,
+    refetchInterval: 15_000,
   });
 }
 
 export function useUpdateAccountFolders(accountId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (folders: { imap_path: string; sync_enabled: boolean }[]) =>
+    mutationFn: (folders: { imap_path: string; is_inbox: boolean }[]) =>
       api.put<Folder[]>(`/api/accounts/${accountId}/folders`, { folders }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["accounts", accountId, "folders"] });
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
     },
   });
 }

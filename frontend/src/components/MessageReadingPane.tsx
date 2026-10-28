@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 
 import { useMessage } from "../api/useMessages";
-import type { MessageSummary } from "../api/types";
 import { useUiStore } from "../store/uiStore";
 import { ArrowLeftIcon, PaperclipIcon } from "./icons";
 import Skeleton from "./Skeleton";
@@ -31,16 +30,16 @@ function buildForwardedHtml(detail: {
 }
 
 export default function MessageReadingPane({
-  summary,
+  messageId,
   onDelete,
   onBack,
 }: {
-  summary: MessageSummary | null;
+  messageId: number | null;
   onDelete: (id: number) => void;
   /* Below lg the pane replaces the list, so it needs a way back. */
   onBack: () => void;
 }) {
-  const { data: detail, isLoading } = useMessage(summary?.id ?? null);
+  const { data: detail, isLoading, isError, error, refetch } = useMessage(messageId);
   const openReply = useUiStore((s) => s.openReply);
   const openForward = useUiStore((s) => s.openForward);
 
@@ -53,10 +52,20 @@ export default function MessageReadingPane({
     return `<html><head><meta name="color-scheme" content="light"><base target="_blank"></head><body style="margin:0;padding:12px;background:#fff;color:#111;font-family:system-ui,sans-serif;font-size:14px;">${body}</body></html>`;
   }, [detail]);
 
-  if (!summary) {
+  if (messageId === null) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-gray-600 dark:text-gray-300">
         Select a message to read it
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div role="alert" className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center">
+        <p>{error instanceof Error ? error.message : "Could not load this message."}</p>
+        <button onClick={() => refetch()} className="glass-button">Retry</button>
+        <button onClick={onBack} className="glass-button">Back to message list</button>
       </div>
     );
   }
@@ -95,9 +104,9 @@ export default function MessageReadingPane({
             <span
               aria-hidden="true"
               className="h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: summary.account_color }}
+              style={{ backgroundColor: detail.account_color }}
             />
-            <span className="shrink-0">{summary.account_name}</span>
+            <span className="shrink-0">{detail.account_name}</span>
             <span aria-hidden="true">&middot;</span>
             <span>
               {detail.from_name} &lt;{detail.from_addr}&gt;
@@ -120,7 +129,7 @@ export default function MessageReadingPane({
           {detail.attachments.map((a) => (
             <a
               key={a.part_index}
-              href={`/api/messages/${summary.id}/attachments/${a.part_index}`}
+              href={`/api/messages/${detail.id}/attachments/${a.part_index}`}
               className="glass-button inline-flex items-center gap-1.5 py-1"
               download
             >
@@ -135,8 +144,8 @@ export default function MessageReadingPane({
           <button
             onClick={() =>
               openReply({
-                sourceMessageId: summary.id,
-                defaultAccountId: summary.account_id,
+                sourceMessageId: detail.id,
+                defaultAccountId: detail.account_id,
                 defaultTo: detail.from_addr ? [detail.from_addr] : [],
                 defaultSubject: detail.subject?.startsWith("Re:")
                   ? detail.subject
@@ -151,8 +160,8 @@ export default function MessageReadingPane({
           <button
             onClick={() =>
               openForward({
-                sourceMessageId: summary.id,
-                defaultAccountId: summary.account_id,
+                sourceMessageId: detail.id,
+                defaultAccountId: detail.account_id,
                 defaultTo: [],
                 defaultSubject: /^Fwd:/i.test(detail.subject ?? "")
                   ? (detail.subject ?? "")
@@ -165,7 +174,7 @@ export default function MessageReadingPane({
             Forward
           </button>
         </div>
-        <button onClick={() => onDelete(summary.id)} className="glass-button-danger">
+        <button onClick={() => onDelete(detail.id)} className="glass-button-danger">
           Delete
         </button>
       </div>

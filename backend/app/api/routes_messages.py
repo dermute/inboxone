@@ -7,13 +7,13 @@ import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from sqlalchemy import delete, or_, select, tuple_
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core import activity
 from app.core.security import require_session
-from app.db.models import Account, Message, Protocol
+from app.db.models import Account, Folder, Message, Protocol
 from app.db.session import DBSession
 from app.schemas.message import (
     AttachmentMeta,
@@ -29,7 +29,9 @@ from app.services.account_connection import get_graph_token, open_imap_connectio
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/messages", tags=["messages"], dependencies=[Depends(require_session)])
+router = APIRouter(
+    prefix="/api/messages", tags=["messages"], dependencies=[Depends(require_session)]
+)
 
 
 def _encode_cursor(date_sent: datetime | None, message_id: int) -> str:
@@ -48,8 +50,9 @@ async def list_messages(
     account_id: int | None = None,
     folder_id: int | None = None,
     unread_only: bool = False,
+    notifications_only: bool = False,
     search: str | None = Query(default=None, max_length=200),
-    limit: int = 50,
+    limit: int = Query(default=50, ge=1, le=200),
     cursor: str | None = None,
 ) -> MessageListPage:
     query = select(Message).options(selectinload(Message.account))
@@ -57,6 +60,13 @@ async def list_messages(
         query = query.where(Message.account_id == account_id)
     if folder_id is not None:
         query = query.where(Message.folder_id == folder_id)
+    else:
+        query = query.join(Folder).where(Folder.is_inbox.is_(True))
+    if notifications_only:
+        query = query.where(
+            Message.notification_eligible.is_(True),
+            Message.folder.has(and_(Folder.history_complete.is_(True), Folder.is_inbox.is_(True))),
+        )
     if unread_only:
         query = query.where(Message.is_seen.is_(False))
     if search and (term := search.strip()):
@@ -76,9 +86,16 @@ async def list_messages(
 
     if cursor:
         cursor_date, cursor_id = _decode_cursor(cursor)
-        query = query.where(
-            tuple_(Message.date_sent, Message.id) < tuple_(cursor_date, cursor_id)
-        )
+        if cursor_date is None:
+            query = query.where(Message.date_sent.is_(None), Message.id < cursor_id)
+        else:
+            query = query.where(
+                or_(
+                    Message.date_sent < cursor_date,
+                    Message.date_sent.is_(None),
+                    and_(Message.date_sent == cursor_date, Message.id < cursor_id),
+                )
+            )
 
     query = query.order_by(Message.date_sent.desc(), Message.id.desc()).limit(limit + 1)
     result = await db.execute(query)
@@ -121,6 +138,8 @@ async def mark_all_read(
         query = query.where(Message.account_id == account_id)
     if folder_id is not None:
         query = query.where(Message.folder_id == folder_id)
+    else:
+        query = query.join(Folder).where(Folder.is_inbox.is_(True))
     result = await db.execute(query)
     messages = list(result.scalars().all())
 
@@ -139,12 +158,17 @@ async def mark_all_read(
             try:
                 client = await open_imap_connection(db, account)
             except Exception:
-                logger.exception("Failed to connect to %s while marking messages read", account.name)
+                logger.exception(
+                    "Failed to connect to %s while marking messages read", account.name
+                )
                 continue
             try:
                 for path, folder_messages in by_folder.items():
                     uids = [m.uid for m in folder_messages]
-                    await asyncio.to_thread(imap_client.mark_seen, client, path, uids)
+                    for offset in range(0, len(uids), 200):
+                        await asyncio.to_thread(
+                            imap_client.mark_seen, client, path, uids[offset : offset + 200]
+                        )
                     for m in folder_messages:
                         m.is_seen = True
                         updated += 1
@@ -157,17 +181,46 @@ async def mark_all_read(
     return {"updated": updated}
 
 
-async def _fetch_and_parse(db: AsyncSession, message: Message, mark_seen: bool) -> dict:
+async def _fetch_raw(db: AsyncSession, message: Message, mark_seen: bool = False) -> bytes:
     account = message.account
     with activity.track(f"Fetching message from {account.name}..."):
-        client = await open_imap_connection(db, account)
+        client = None
         try:
-            raw = await asyncio.to_thread(
-                imap_client.fetch_full_message, client, message.folder.imap_path, message.uid, mark_seen
+            client = await open_imap_connection(db, account)
+            validity = await asyncio.to_thread(
+                imap_client.select_folder_uidvalidity, client, message.folder.imap_path
             )
+            if validity != message.uidvalidity:
+                raise HTTPException(
+                    status_code=404, detail="Message no longer exists on the mail server"
+                )
+            raw = await asyncio.to_thread(
+                imap_client.fetch_full_message,
+                client,
+                message.folder.imap_path,
+                message.uid,
+                mark_seen,
+            )
+        except imap_client.MessageNotFoundError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        except HTTPException:
+            raise
+        except Exception as exc:
+            logger.exception("Failed fetching message %s", message.id)
+            raise HTTPException(
+                status_code=502, detail="Could not fetch message from the mail server"
+            ) from exc
         finally:
-            await asyncio.to_thread(client.logout)
-    return mail_parser.parse_full_message(raw)
+            if client is not None:
+                try:
+                    await asyncio.to_thread(client.logout)
+                except Exception:
+                    logger.exception("Logout failed after fetching message %s", message.id)
+    return raw
+
+
+async def _fetch_and_parse(db: AsyncSession, message: Message, mark_seen: bool) -> dict:
+    return mail_parser.parse_full_message(await _fetch_raw(db, message, mark_seen))
 
 
 @router.get("/{message_id}", response_model=MessageDetail)
@@ -189,6 +242,10 @@ async def get_message(message_id: int, db: DBSession) -> MessageDetail:
 
     return MessageDetail(
         id=message.id,
+        account_id=message.account_id,
+        account_name=message.account.name,
+        account_color=message.account.color,
+        folder_id=message.folder_id,
         subject=parsed.get("subject"),
         from_name=parsed.get("from_name"),
         from_addr=parsed.get("from_addr"),
@@ -214,25 +271,17 @@ async def get_attachment(message_id: int, part_index: str, db: DBSession):
     if message is None:
         raise HTTPException(status_code=404, detail="Message not found")
 
-    account = message.account
-    with activity.track(f"Downloading attachment from {account.name}..."):
-        client = await open_imap_connection(db, account)
-        try:
-            raw = await asyncio.to_thread(
-                imap_client.fetch_full_message, client, message.folder.imap_path, message.uid, False
-            )
-        finally:
-            await asyncio.to_thread(client.logout)
-
-    payload, content_type, filename = mail_parser.extract_attachment_bytes(raw, part_index)
+    parsed = await _fetch_raw(db, message)
+    try:
+        payload, content_type, filename = mail_parser.extract_attachment_bytes(parsed, part_index)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Attachment not found") from exc
     headers = {"Content-Disposition": f'attachment; filename="{filename or "attachment"}"'}
     return Response(content=payload, media_type=content_type, headers=headers)
 
 
 @router.post("/{message_id}/flags", response_model=MessageOut)
-async def update_flags(
-    message_id: int, payload: FlagsUpdate, db: DBSession
-) -> Message:
+async def update_flags(message_id: int, payload: FlagsUpdate, db: DBSession) -> Message:
     result = await db.execute(
         select(Message)
         .where(Message.id == message_id)
@@ -359,9 +408,7 @@ async def reply(message_id: int, payload: ReplyRequest, db: DBSession) -> dict:
 
 
 @router.post("/{message_id}/forward")
-async def forward(
-    message_id: int, payload: ForwardRequest, db: DBSession
-) -> dict:
+async def forward(message_id: int, payload: ForwardRequest, db: DBSession) -> dict:
     result = await db.execute(select(Message).where(Message.id == message_id))
     original = result.scalar_one_or_none()
     if original is None:

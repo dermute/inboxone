@@ -88,7 +88,8 @@ class Folder(Base):
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"))
     imap_path: Mapped[str] = mapped_column(String, nullable=False)
     display_name: Mapped[str | None] = mapped_column(String)
-    sync_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_inbox: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    history_complete: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     last_uidvalidity: Mapped[int | None] = mapped_column(Integer)
     last_seen_uid: Mapped[int] = mapped_column(Integer, default=0)
@@ -116,6 +117,8 @@ class Message(Base):
     folder_id: Mapped[int] = mapped_column(ForeignKey("folders.id", ondelete="CASCADE"))
     uid: Mapped[int] = mapped_column(Integer, nullable=False)
     uidvalidity: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    notification_eligible: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
 
     message_id_header: Mapped[str | None] = mapped_column(String)
     in_reply_to: Mapped[str | None] = mapped_column(String)

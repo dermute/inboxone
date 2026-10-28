@@ -39,6 +39,10 @@ class AttachmentMeta(BaseModel):
 
 class MessageDetail(BaseModel):
     id: int
+    account_id: int
+    account_name: str
+    account_color: str
+    folder_id: int
     subject: str | None
     from_name: str | None
     from_addr: str | None

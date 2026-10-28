@@ -14,26 +14,34 @@ import Skeleton from "../components/Skeleton";
 import type { Account } from "../api/types";
 
 function FolderPicker({ account }: { account: Account }) {
-  const { data: folders } = useAccountFolders(account.id);
+  const { data: folders, isError, refetch } = useAccountFolders(account.id);
   const updateFolders = useUpdateAccountFolders(account.id);
 
+  if (isError) return <button className="glass-button" onClick={() => refetch()}>Retry loading folders</button>;
   if (!folders) return <p className="text-sm text-gray-500 dark:text-gray-400">Loading folders...</p>;
 
   function toggle(path: string, enabled: boolean) {
     const next = folders!.map((f) => ({
       imap_path: f.imap_path,
-      sync_enabled: f.imap_path === path ? enabled : f.sync_enabled,
+      is_inbox: f.imap_path === path ? enabled : f.is_inbox,
     }));
     updateFolders.mutate(next);
   }
 
   return (
     <div className="space-y-1">
+      <p className="mb-2 text-xs text-gray-600 dark:text-gray-300">
+        All folders sync automatically. Choose which folders to include in inbox views.
+      </p>
+      {folders.length === 0 && <p className="text-sm">Folders appear after the first sync.</p>}
+      {updateFolders.isError && <p role="alert" className="text-sm text-red-600">Could not save inbox choices. Please try again.</p>}
       {folders.map((f) => (
         <label key={f.id} className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
-            checked={f.sync_enabled}
+            aria-label={`Include ${f.display_name || f.imap_path} in inbox`}
+            disabled={updateFolders.isPending}
+            checked={f.is_inbox}
             onChange={(e) => toggle(f.imap_path, e.target.checked)}
           />
           {f.display_name || f.imap_path}

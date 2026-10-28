@@ -16,7 +16,11 @@ attachments are fetched on demand and are not persisted.
   an unread-only filter.
 - Reply to or forward messages from any configured account, from a single aggregated
   view.
-- Per-account folder selection — sync just `INBOX`, or additional folders/labels too.
+- Automatically discover and sync the complete message history of every selectable
+  folder, including Sent, Archive, Junk, and Trash. Browse any folder to read its mail.
+- Choose “Include in inbox” folders per account. Combined and account inbox views,
+  total unread badges, and new-mail notifications include only those folders.
+  Standard `INBOX` folders are included by default.
 - A single app-wide password gate protects the whole UI.
 - Modern three-pane UI (filter rail / message list / reading pane), not an old-school
   webmail look.
@@ -158,6 +162,28 @@ old one - no need to touch `.env` or restart anything.
   provider. SMTP accounts use IMAP to save the copy; Gmail and Microsoft accounts
   use their provider's automatic Sent storage. If a message is sent but saving its
   copy fails, inboxone displays a warning so you do not accidentally send it again.
+
+## Folders and synchronization
+
+All selectable folders are discovered on each sync, including newly created folders.
+In **Settings → Accounts → Folders**, check the folders to include in inbox views.
+These choices do not change provider folders or stop other folders from syncing.
+Expand an account in the sidebar to browse any folder; selecting the account itself
+shows only its marked inbox folders. Search and “Mark all as read” apply within the
+selected inbox or folder view.
+
+The first sync imports all message headers in batches of 200 and resumes after an
+interruption. Larger accounts may take time to finish. Bodies and attachments require
+an online connection and are fetched only when opened or downloaded. Historical
+imports do not generate new-mail notifications. Mail flags and removals are reconciled
+on subsequent syncs; folders removed on the provider are removed from the local cache
+after successful discovery.
+
+Existing installations migrate automatically on container startup. Existing message
+IDs are retained while older history is backfilled. Only standard `INBOX` folders
+start marked for inbox inclusion; explicitly mark any additional folders after the
+upgrade. Previously disabled folders now synchronize automatically. Copies in multiple
+marked folders appear as separate messages.
 
 ## Building from source
 

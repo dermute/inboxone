@@ -36,12 +36,12 @@ export function useMessages(filters: MessageFilters) {
   });
 }
 
-// Unfiltered across every account, newest-first - used by the new-mail notifier to
-// spot newly-arrived unread messages regardless of which account/folder is on screen.
-export function useRecentUnread() {
+// Poll inbox folders across accounts, excluding historical backfills. A membership
+// change uses a fresh query so notification tracking can establish a new baseline.
+export function useRecentUnread(membership: string) {
   return useQuery({
-    queryKey: ["messages", "recent-unread"],
-    queryFn: () => api.get<MessageListPage>("/api/messages?unread_only=true&limit=20"),
+    queryKey: ["messages", "recent-unread", membership],
+    queryFn: () => api.get<MessageListPage>("/api/messages?unread_only=true&notifications_only=true&limit=200"),
     refetchInterval: 20_000,
     // Without this, React Query pauses the interval entirely while the tab is
     // backgrounded - the new-mail notifier would never see anything to diff against.
@@ -59,6 +59,9 @@ export function useMessage(id: number | null) {
       // changes per-account/folder unread counts - the sidebar badges otherwise have
       // no way to know that happened until their own next independent poll.
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["messages"], exact: false, predicate: (query) =>
+        query.queryKey[1] !== "detail"
+      });
       return detail;
     },
     enabled: id !== null,
