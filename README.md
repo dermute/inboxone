@@ -166,7 +166,7 @@ old one - no need to touch `.env` or restart anything.
 ## Folders and synchronization
 
 All selectable folders are discovered on each sync, including newly created folders.
-In **Settings → Accounts → Folders**, check the folders to include in inbox views.
+In **Settings → Accounts → Inbox folders**, check the folders to include in inbox views.
 These choices do not change provider folders or stop other folders from syncing.
 Expand an account in the sidebar to browse any folder; selecting the account itself
 shows only its marked inbox folders. Search and “Mark all as read” apply within the

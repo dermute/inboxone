@@ -86,7 +86,7 @@ function AccountRow({ account, onEdit }: { account: Account; onEdit: (account: A
           aria-expanded={expanded}
           className="glass-button px-3 py-1 text-xs"
         >
-          Folders
+          Inbox folders
         </button>
         <button onClick={() => setConfirmRemove(true)} className="glass-button-danger px-3 py-1 text-xs">
           Remove
