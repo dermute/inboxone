@@ -2,8 +2,8 @@
 
 FROM node:24-alpine AS frontend-builder
 WORKDIR /frontend
-COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm install
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --include=optional --libc=musl
 COPY frontend/ ./
 RUN npm run build
 
