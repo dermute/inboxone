@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { useAccounts } from "../api/useAccounts";
+import { inboxFolders } from "../api/inboxes";
 import { useRecentUnread } from "../api/useMessages";
 import type { MessageSummary } from "../api/types";
 import { navigationRef } from "../store/navigation";
@@ -25,14 +26,14 @@ function notifyNewMessage(message: MessageSummary): void {
   };
 }
 
-// Renders nothing - just polls for newly-arrived unread mail (across every account,
-// regardless of what's currently on screen) and fires a browser notification for
+// Renders nothing - polls for newly-arrived unread mail in marked inboxes across accounts,
+// regardless of what's currently on screen, and fires a browser notification for
 // anything that wasn't there on the previous poll.
 export default function NewMailWatcher() {
   const enabled = useNotificationStore((s) => s.enabled);
   const { data: accounts } = useAccounts();
-  const membership = accounts?.flatMap((account) => account.folders
-    .filter((folder) => folder.is_inbox).map((folder) => folder.id)).sort((a, b) => a - b).join(",") ?? "";
+  const membership = accounts?.flatMap(inboxFolders)
+    .map((folder) => folder.id).sort((a, b) => a - b).join(",") ?? "";
   const { data } = useRecentUnread(membership);
   const previousMembership = useRef(membership);
   const seenIds = useRef<Set<number> | null>(null);
@@ -43,7 +44,11 @@ export default function NewMailWatcher() {
       previousMembership.current = membership;
     }
     if (!data) return;
-    const currentIds = new Set(data.items.map((m) => m.id));
+    // Also enforce the current selection locally in case a response predates a
+    // folder being unmarked or the accounts query has not loaded yet.
+    const inboxIds = new Set(membership.split(",").filter(Boolean).map(Number));
+    const messages = data.items.filter((message) => inboxIds.has(message.folder_id));
+    const currentIds = new Set(messages.map((m) => m.id));
 
     if (seenIds.current === null) {
       // First poll of the session: record the baseline without notifying, so opening
@@ -56,7 +61,7 @@ export default function NewMailWatcher() {
       enabled && typeof Notification !== "undefined" && Notification.permission === "granted";
 
     if (canNotify) {
-      for (const message of data.items) {
+      for (const message of messages) {
         if (!seenIds.current.has(message.id)) {
           notifyNewMessage(message);
         }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import type { Account } from "../api/types";
+import { inboxUnreadCount } from "../api/inboxes";
 import { toast } from "../store/toastStore";
 import { ChevronRightIcon } from "./icons";
 import InstallAppButton from "./InstallAppButton";
@@ -15,10 +16,6 @@ function UnreadBadge({ count }: { count: number }) {
       {count}
     </span>
   );
-}
-
-function accountUnreadCount(account: Account): number {
-  return account.folders.reduce((sum, f) => sum + (f.is_inbox ? f.unread_count : 0), 0);
 }
 
 export default function AccountFilterRail({
@@ -64,11 +61,11 @@ export default function AccountFilterRail({
           }`}
         >
           All inboxes
-          <UnreadBadge count={accounts.reduce((sum, account) => sum + accountUnreadCount(account), 0)} />
+          <UnreadBadge count={accounts.reduce((sum, account) => sum + inboxUnreadCount(account), 0)} />
         </button>
         {accounts.map((account) => {
           const isExpanded = !!expanded[account.id];
-          const unread = accountUnreadCount(account);
+          const unread = inboxUnreadCount(account);
           return (
             <div key={account.id} className="mb-1">
               <div

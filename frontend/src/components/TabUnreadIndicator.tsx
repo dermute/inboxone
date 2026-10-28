@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import { useAccounts } from "../api/useAccounts";
+import { inboxUnreadCount } from "../api/inboxes";
 
 const BASE_ICON_SRC = "/favicon.svg";
 const CANVAS_SIZE = 64; // 2x the 32x32 viewBox, for crispness at real favicon sizes
@@ -61,7 +62,7 @@ function drawBadgedIcon(canvas: HTMLCanvasElement, base: HTMLImageElement, count
 }
 
 // Renders nothing - keeps the document title and favicon in sync with the
-// total unread count. The title is invisible once a tab is pinned (only the
+// unread count in marked inboxes. The title is invisible once a tab is pinned (only the
 // favicon shows), so the count is also drawn as a badge onto a canvas copy
 // of the favicon and swapped in as the tab icon.
 export default function TabUnreadIndicator() {
@@ -71,7 +72,7 @@ export default function TabUnreadIndicator() {
 
   useEffect(() => {
     const total = (accounts ?? []).reduce(
-      (sum, account) => sum + account.folders.reduce((s, f) => s + (f.is_inbox ? f.unread_count : 0), 0),
+      (sum, account) => sum + inboxUnreadCount(account),
       0
     );
     document.title = total > 0 ? `(${total}) inboxone` : "inboxone";
