@@ -7,11 +7,25 @@ from email.policy import default as default_policy
 from email.utils import formatdate, getaddresses, make_msgid, parseaddr, parsedate_to_datetime
 
 
+def _address_header(msg: Message, name: str) -> str:
+    try:
+        return msg.get(name, "")
+    except ValueError as exc:
+        if "address parts cannot contain CR or LF" not in str(exc):
+            raise
+        # Some received mail encodes newlines inside address display names.
+        # Decode as unstructured text to bypass Address's CR/LF validation,
+        # then flatten those newlines before the tolerant address parser runs.
+        raw = next(value for key, value in msg.raw_items() if key.lower() == name.lower())
+        decoded = str(default_policy.header_factory("X-Unparsed-Address", raw))
+        return decoded.replace("\r", " ").replace("\n", " ")
+
+
 def parse_header_block(header_bytes: bytes) -> dict:
     msg = BytesHeaderParser(policy=default_policy).parsebytes(header_bytes)
-    from_name, from_addr = parseaddr(msg.get("From", ""))
-    to_addrs = [addr for _name, addr in getaddresses([msg.get("To", "")]) if addr]
-    cc_addrs = [addr for _name, addr in getaddresses([msg.get("Cc", "")]) if addr]
+    from_name, from_addr = parseaddr(_address_header(msg, "From"))
+    to_addrs = [addr for _name, addr in getaddresses([_address_header(msg, "To")]) if addr]
+    cc_addrs = [addr for _name, addr in getaddresses([_address_header(msg, "Cc")]) if addr]
 
     date_sent = None
     if msg.get("Date"):

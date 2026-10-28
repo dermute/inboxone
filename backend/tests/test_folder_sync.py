@@ -125,6 +125,33 @@ async def folders(mail):
 
 
 @pytest.mark.asyncio
+async def test_sync_continues_past_encoded_newlines_in_addresses(mail, monkeypatch):
+    mail.mailbox.folders = {"INBOX": {1: (), 2: ()}}
+    original_fetch = mail.mailbox.fetch
+
+    def fetch(uids, items):
+        result = original_fetch(uids, items)
+        if items == imap_client.HEADER_FETCH_ITEMS and 1 in result:
+            result[1][b"BODY[HEADER]"] = (
+                b"From: =?utf-8?Q?Alice=0D=0ASmith?= <alice@example.com>\r\n"
+                b"Subject: Malformed sender\r\n\r\n"
+            )
+        return result
+
+    monkeypatch.setattr(mail.mailbox, "fetch", fetch)
+    await worker.sync_account(mail.account_id)
+
+    async with mail.factory() as db:
+        account = await db.get(Account, mail.account_id)
+        assert account.last_sync_status == "ok"
+        assert account.last_sync_error is None
+        messages = list((await db.scalars(select(Message).order_by(Message.uid))).all())
+        assert [message.uid for message in messages] == [1, 2]
+        assert messages[0].from_addr == "alice@example.com"
+    assert (await folders(mail))["INBOX"]["history_complete"] is True
+
+
+@pytest.mark.asyncio
 async def test_discovers_all_selectable_folders_and_preserves_inbox_choices(mail):
     await worker.sync_account(mail.account_id)
     found = await folders(mail)
