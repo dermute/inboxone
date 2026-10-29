@@ -1,7 +1,10 @@
 import { useActivityStore, visibleWork } from "../store/activityStore";
 import ConnectionStatus from "./ConnectionStatus";
+import { useTriggerSync } from "../api/useSync";
+import { toast } from "../store/toastStore";
 
 export default function StatusBar() {
+  const refresh = useTriggerSync();
   const local = useActivityStore((s) => s.local);
   const server = useActivityStore((s) => s.server);
   const work = visibleWork(local, server);
@@ -16,6 +19,12 @@ export default function StatusBar() {
           {work.length > 1 && <span className="shrink-0">+{work.length - 1} more</span>}
         </>}
       </div>
+      <button type="button" className="glass-button shrink-0" disabled={refresh.isPending}
+        onClick={() => refresh.mutate(undefined, {
+          onError: (error) => toast(error instanceof Error ? error.message : "Could not request refresh"),
+        })}>
+        Refresh all
+      </button>
     </footer>
   );
 }

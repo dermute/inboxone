@@ -19,13 +19,11 @@ export default function LiveUpdates() {
     const refresh = () => {
       void api.post("/api/sync/trigger").catch(() => {});
     };
-    const presence = (refreshVisible = false) => {
+    const presence = (refreshStatus = false) => {
       const visible = document.visibilityState === "visible";
       void api.post("/api/sync/presence", { client_id: clientId, visible }).catch(() => {});
-      if (visible && refreshVisible) {
+      if (visible && refreshStatus) {
         void refreshActivity();
-        invalidate();
-        refresh();
       }
     };
     const onVisibility = () => presence(true);
@@ -71,6 +69,8 @@ export default function LiveUpdates() {
     };
     connect();
     presence(true);
+    // Opening the app catches up once; returning to the tab only reports presence.
+    if (document.visibilityState === "visible") refresh();
     const lease = window.setInterval(() => {
       if (document.visibilityState === "visible") presence();
     }, 20_000);

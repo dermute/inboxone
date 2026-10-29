@@ -120,6 +120,30 @@ const server = http.createServer(async (req, res) => {
     const footer = page.getByRole("contentinfo", { name: "Application status" });
     const status = () => footer.getByRole("button", { name: /^Connection status:/ });
     await page.getByRole("button", { name: "Connection status: Connected" }).waitFor();
+    // Allow focus handlers and their immediate requests to settle; SSE stays open.
+    await page.waitForTimeout(500);
+    const syncCalls = () => calls.filter((call) => call.startsWith("POST /api/sync/trigger"));
+    assert(syncCalls().includes("POST /api/sync/trigger"), "opening the app syncs all accounts");
+    const mailCalls = () => calls.filter((call) => call.startsWith("GET /api/messages") || call === "GET /api/accounts");
+    const beforeFocusSync = syncCalls().length;
+    const beforeFocusMail = mailCalls().length;
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() => {
+        Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
+        document.dispatchEvent(new Event("visibilitychange"));
+        window.dispatchEvent(new Event("blur"));
+      });
+      await page.evaluate(() => {
+        Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "visible" });
+        document.dispatchEvent(new Event("visibilitychange"));
+        window.dispatchEvent(new Event("focus"));
+        window.dispatchEvent(new PageTransitionEvent("pageshow", { persisted: true }));
+      });
+    }
+    // Allow focus handlers and their immediate requests to settle; SSE stays open.
+    await page.waitForTimeout(500);
+    assert.equal(syncCalls().length, beforeFocusSync, "tab return must not sync mail");
+    assert.equal(mailCalls().length, beforeFocusMail, "tab return must not reload cached mail");
     assert.equal(await page.getByText("Sync now", { exact: true }).count(), 0);
     // Historical imports appear in the message cache but never enter notifications.
     const message = { id: 1, account_id: 1, folder_id: 1, account_name: account.name,
@@ -157,6 +181,23 @@ const server = http.createServer(async (req, res) => {
       await footer.getByText("Connected", { exact: true }).waitFor();
     }
     assert.equal(calls.filter((call) => call === "POST /api/sync/trigger?folder_id=2").length, 2);
+    // The visible button always refreshes all accounts, even with Archive selected.
+    const refreshAll = footer.getByRole("button", { name: "Refresh all", exact: true });
+    const beforeManual = syncCalls().length;
+    const releaseRefresh = hold("POST", "/api/sync/trigger");
+    const manualResponse = page.waitForResponse((response) => response.url().endsWith("/api/sync/trigger"));
+    await refreshAll.click();
+    await footer.getByText("Refreshing accounts…", { exact: true }).waitFor();
+    assert(await refreshAll.isDisabled());
+    releaseRefresh();
+    await manualResponse;
+    await page.waitForFunction(() => !document.querySelector('footer button:last-child')?.disabled);
+    assert.equal(syncCalls().length, beforeManual + 1);
+    assert.equal(syncCalls().at(-1), "POST /api/sync/trigger");
+    failures.add("POST /api/sync/trigger");
+    await refreshAll.click();
+    await page.getByRole("status").filter({ hasText: "Mail server unavailable" }).waitFor();
+    failures.delete("POST /api/sync/trigger");
 
     // A foreground message fetch takes precedence over a long background sync.
     activity([{ id: "background", label: "Syncing another account…", kind: "sync", account_id: 9 }]);
@@ -260,7 +301,7 @@ const server = http.createServer(async (req, res) => {
     await status().click();
     await page.getByRole("dialog", { name: "Connection status" }).waitFor();
     await page.getByRole("button", { name: "Retry", exact: true }).click();
-    await page.getByRole("button", { name: "Refresh all", exact: true }).click();
+    await page.getByRole("dialog", { name: "Connection status" }).getByRole("button", { name: "Refresh all", exact: true }).click();
     await page.getByRole("button", { name: "Close", exact: true }).click();
     assert(calls.includes("POST /api/sync/retry?account_id=1"));
     await page.getByRole("link", { name: "Settings", exact: true }).click();
@@ -295,6 +336,14 @@ const server = http.createServer(async (req, res) => {
     await page.getByRole("button", { name: "Back to message list", exact: true }).waitFor();
     const bounds = await footer.boundingBox();
     assert(bounds && bounds.y + bounds.height <= 844 && bounds.y > 750);
+    const refreshBounds = await refreshAll.boundingBox();
+    assert(refreshBounds && refreshBounds.x >= 0 && refreshBounds.x + refreshBounds.width <= 390);
+    const beforeMobileRefresh = syncCalls().length;
+    await refreshAll.click();
+    // Allow focus handlers and their immediate requests to settle; SSE stays open.
+    await page.waitForTimeout(500);
+    assert.equal(syncCalls().length, beforeMobileRefresh + 1);
+    assert.equal(syncCalls().at(-1), "POST /api/sync/trigger");
     await status().click();
     await page.getByRole("dialog", { name: "Connection status" }).waitFor();
     await page.getByRole("button", { name: "Close", exact: true }).click();

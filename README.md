@@ -189,8 +189,10 @@ The setting persists across restarts and applies immediately without reconnectin
 accounts. The schedule is the same for visible and hidden pages. Live mail events
 still sync immediately; renewing an idle connection alone does not trigger a sync.
 Visibility leases renew every 20 seconds and expire after 60 seconds, so multiple
-tabs and unexpectedly closed browsers are handled together. Opening, reloading, or
-returning to a visible page requests a full refresh. Every folder click requests
+tabs and unexpectedly closed browsers are handled together. Opening or reloading
+a visible page requests a full refresh. Returning to the browser tab does not start
+a sync or reload cached messages. Use **Refresh all** in the bottom status bar to
+manually sync every active account. Every folder click requests
 that folder's refresh while showing cached mail
 immediately. Requests across tabs merge with running work, with at most one merged
 follow-up pass per account. Account work remains serialized and globally bounded.
