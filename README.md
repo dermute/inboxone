@@ -132,7 +132,7 @@ not need to register an Azure application.
 | `SECRET_KEY` | Random secret used to sign the session cookie. |
 | `ENCRYPTION_KEY` | Fernet key used to encrypt stored IMAP/SMTP passwords and OAuth tokens at rest. Do not rotate after accounts exist without a migration - existing encrypted values would become unreadable. |
 | `DATABASE_URL` | SQLite connection string (defaults to the `/data` bind mount). |
-| `SYNC_DEFAULT_INTERVAL_SECONDS` | Legacy compatibility setting; fixed refresh timing below supersedes it. |
+| `SYNC_DEFAULT_INTERVAL_SECONDS` | Legacy compatibility setting; the global refresh setting below supersedes it. |
 
 ## Forgot your password?
 
@@ -180,18 +180,23 @@ connection. Changes trigger reconciliation and committed updates reach open page
 through an authenticated server-sent event stream. IDLE renews every 10 minutes;
 connections retry with jittered exponential backoff from 5 seconds to 5 minutes,
 using fresh OAuth credentials and catching up after reconnecting. Unsupported IDLE
-or provider connection limits visibly fall back to 60-second inbox polling.
-Healthy IDLE folders also reconcile every 15 minutes as a safety net.
+or provider connection limits visibly fall back to scheduled inbox polling.
 
-Other folders and folder discovery refresh every 60 seconds while any authenticated
-page is visible, otherwise every 15 minutes. Visibility leases renew every 20 seconds
-and expire after 60 seconds, so multiple tabs and unexpectedly closed browsers are
-handled together. Opening, reloading, or returning to a visible page requests a full
-refresh. Every folder click requests that folder's refresh while showing cached mail
+Automatic refreshes default to every 15 minutes for all accounts, including inbox
+safety checks, polling fallback, other folders, and folder discovery. Change
+**Automatic refresh** in Settings to any whole-minute interval from 1 to 1,440 minutes.
+The setting persists across restarts and applies immediately without reconnecting
+accounts. The schedule is the same for visible and hidden pages. Live mail events
+still sync immediately; renewing an idle connection alone does not trigger a sync.
+Visibility leases renew every 20 seconds and expire after 60 seconds, so multiple
+tabs and unexpectedly closed browsers are handled together. Opening, reloading, or
+returning to a visible page requests a full refresh. Every folder click requests
+that folder's refresh while showing cached mail
 immediately. Requests across tabs merge with running work, with at most one merged
 follow-up pass per account. Account work remains serialized and globally bounded.
-The legacy `sync_interval_seconds` API/database field and interval environment settings
-remain accepted for compatibility; they no longer control refresh timing.
+The legacy per-account `sync_interval_seconds` API/database field and interval
+environment settings remain accepted for compatibility; they no longer control
+refresh timing.
 
 The connection button in the bottom status bar (also accessible in Settings)
 opens connection details, last successful syncs, sanitized errors, retry

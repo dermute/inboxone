@@ -12,6 +12,7 @@ import AccountEditorModal from "../components/AccountEditorModal";
 import ConnectionStatus from "../components/ConnectionStatus";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Skeleton from "../components/Skeleton";
+import RefreshSettings from "../components/RefreshSettings";
 import type { Account } from "../api/types";
 
 function FolderPicker({ account }: { account: Account }) {
@@ -167,6 +168,8 @@ export default function SettingsAccountsPage() {
           Add account
         </button>
       </div>
+
+      <RefreshSettings />
 
       {isLoading && (
         <div aria-label="Loading accounts" role="status" className="space-y-3">

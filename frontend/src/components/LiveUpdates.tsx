@@ -49,6 +49,9 @@ export default function LiveUpdates() {
         if (disposed) return;
         const data = JSON.parse(event.data);
         if (data.type === "activity" || data.type === "snapshot") receiveActivity(data.items ?? []);
+        if (data.type === "settings" || data.type === "snapshot") {
+          void cache.invalidateQueries({ queryKey: ["settings"] });
+        }
         if (data.type === "snapshot" || data.type === "folder" || data.type === "folders") {
           invalidate();
         } else if (data.type !== "activity") {

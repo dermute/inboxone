@@ -6,7 +6,14 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.api import routes_accounts, routes_auth, routes_messages, routes_oauth_ms, routes_sync
+from app.api import (
+    routes_accounts,
+    routes_auth,
+    routes_messages,
+    routes_oauth_ms,
+    routes_settings,
+    routes_sync,
+)
 from app.core.config import get_settings
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -37,6 +44,7 @@ app.include_router(routes_accounts.router)
 app.include_router(routes_oauth_ms.router)
 app.include_router(routes_messages.router)
 app.include_router(routes_sync.router)
+app.include_router(routes_settings.router)
 
 if STATIC_DIR.exists():
     app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="assets")

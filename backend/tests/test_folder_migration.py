@@ -24,6 +24,7 @@ def test_upgrade_preserves_messages_and_backfills_all_existing_folders(tmp_path,
     alembic.set_main_option("script_location", str(backend / "alembic"))
     command.upgrade(alembic, "0003")
     with sqlite3.connect(database) as db:
+        db.execute("INSERT INTO app_settings (id, password_hash) VALUES (1, 'existing-hash')")
         db.execute("INSERT INTO accounts (id, name, protocol) VALUES (1, 'Example', 'imap_basic')")
         db.execute("""INSERT INTO folders
             (id, account_id, imap_path, sync_enabled, last_uidvalidity, last_seen_uid)
@@ -32,6 +33,9 @@ def test_upgrade_preserves_messages_and_backfills_all_existing_folders(tmp_path,
             VALUES (42, 1, 1, 900, 123, 1)""")
     command.upgrade(alembic, "head")
     with sqlite3.connect(database) as db:
+        assert db.execute(
+            "SELECT password_hash, sync_interval_seconds FROM app_settings"
+        ).fetchall() == [("existing-hash", 900)]
         assert db.execute(
             "SELECT id, is_inbox, history_complete, last_seen_uid, last_uidvalidity "
             "FROM folders ORDER BY id"

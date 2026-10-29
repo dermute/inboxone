@@ -20,6 +20,8 @@ export default function ConnectionStatus({ showLabel = false }: { showLabel?: bo
   const query = useQuery({ queryKey: ["connections"],
     queryFn: () => api.get<Connections>("/api/sync/connections") });
   const refresh = useTriggerSync();
+  const minutes = (query.data?.refresh_seconds ?? 900) / 60;
+  const intervalLabel = `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
   const retry = useMutation({ mutationFn: (id: number) =>
     api.post(`/api/sync/retry?account_id=${id}`), onSuccess: () => query.refetch() });
   const health = query.data?.health === "neutral" ? "neutral" :
@@ -43,9 +45,9 @@ export default function ConnectionStatus({ showLabel = false }: { showLabel?: bo
             <Dialog.Close className="glass-button">Close</Dialog.Close>
           </div>
           <Dialog.Description className="my-3 text-sm">
-            {label}. Other folders refresh every {query.data?.refresh_seconds === 60 ? "60 seconds" : "15 minutes"}.
+            {label}. Scheduled refreshes run every {intervalLabel}.
           </Dialog.Description>
-          {!connected && <p className="mb-3 text-sm text-yellow-600">Live updates disconnected. Mail checks every 60 seconds; activity checks every 2 seconds while visible.</p>}
+          {!connected && <p className="mb-3 text-sm text-yellow-600">Live updates disconnected. Cached mail checks every 60 seconds; activity checks every 2 seconds while visible. Server refreshes run every {intervalLabel}.</p>}
           {work.length > 0 && <section aria-label="Ongoing activity" className="glass-card mb-3 p-3 text-sm">
             <h2 className="mb-2 font-semibold">Ongoing activity</h2>
             <ul className="space-y-1">{work.map((item) => <li key={item.id}>
@@ -64,7 +66,7 @@ export default function ConnectionStatus({ showLabel = false }: { showLabel?: bo
               {account.error && <p>{account.error} · {date(account.error_at)}</p>}
               {account.folders.map((folder) => (
                 <div key={folder.folder_id} className="glass-divider border-t pt-2">
-                  <p>{folder.name} · {folder.state} · {folder.mode === "idle" ? "IMAP IDLE" : folder.mode === "polling" ? "60-second polling fallback" : "Scheduled refresh"}</p>
+                  <p>{folder.name} · {folder.state} · {folder.mode === "idle" ? "IMAP IDLE" : folder.mode === "polling" ? `${intervalLabel} polling fallback` : "Scheduled refresh"}</p>
                   <p className="text-xs">Last successful sync: {date(folder.last_success)}</p>
                   {(folder.sync_error || folder.error) && <p className="text-xs text-red-600">{folder.sync_error || folder.error} · {date(folder.sync_error_at || folder.error_at)}</p>}
                   {folder.next_retry && <p className="text-xs">Next connection attempt: {date(folder.next_retry)}</p>}

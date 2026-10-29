@@ -1,4 +1,4 @@
-"""Single-process IDLE supervision and visibility-aware reconciliation policy."""
+"""Single-process IDLE supervision and configurable reconciliation policy."""
 
 from __future__ import annotations
 
@@ -16,6 +16,7 @@ from sqlalchemy import select
 from app.db.models import Account, Folder
 from app.db.session import async_session_factory
 from app.services.account_connection import open_imap_connection
+from app.services.app_settings import get_sync_interval
 from app.sync import live, requests
 from app.sync.worker import _account_locks
 
@@ -62,7 +63,7 @@ def _stop_folder(folder_id: int) -> None:
 
 
 def schedule_account_sync(account_id: int, interval_seconds: int | None = None) -> None:
-    # The legacy interval is intentionally ignored; all refreshes use fixed policy.
+    # The legacy per-account interval is ignored; use the global setting.
     if not _started:
         return
     unschedule_account_sync(account_id)
@@ -154,7 +155,8 @@ async def _watch(account_id: int, folder_id: int, path: str) -> None:
                         await call(client.idle_done)
                         # Resume immediately; repeated events merge into a single pass.
                         await call(client.idle)
-                        requests.request_sync(account_id, {folder_id}, False)
+                        if responses:
+                            requests.request_sync(account_id, {folder_id}, False)
                         renewed = time.monotonic()
             except asyncio.CancelledError:
                 raise
@@ -196,6 +198,7 @@ async def _tick() -> None:
     if requests.retired:
         await asyncio.gather(*requests.retired, return_exceptions=True)
     async with async_session_factory() as db:
+        interval = await get_sync_interval(db)
         active = set(
             (await db.scalars(select(Account.id).where(Account.is_active.is_(True)))).all()
         )
@@ -231,14 +234,16 @@ async def _tick() -> None:
         if account_id not in _last_full:
             requests.request_sync(account_id)
             _last_full[account_id] = current
-        elif current - _last_full[account_id] >= (60 if live.visible() else 900):
+            for folder in folders:
+                if folder.account_id == account_id and folder.is_inbox:
+                    _last_inbox[folder.id] = current
+        elif current - _last_full[account_id] >= interval:
             scope = {f.id for f in folders if f.account_id == account_id and not f.is_inbox}
             requests.request_sync(account_id, scope, True)
             _last_full[account_id] = current
         for folder in folders:
             if folder.account_id != account_id or not folder.is_inbox:
                 continue
-            interval = 900 if live.watchers.get(folder.id, {}).get("state") == "connected" else 60
             if current - _last_inbox.get(folder.id, 0) >= interval:
                 requests.request_sync(account_id, {folder.id}, False)
                 _last_inbox[folder.id] = current

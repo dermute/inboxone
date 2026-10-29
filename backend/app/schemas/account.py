@@ -43,7 +43,7 @@ class AccountCreateBasic(AccountBase):
     smtp_username: str
     smtp_password: str
     sync_interval_seconds: int | None = Field(
-        default=None, description="Legacy compatibility field; fixed IDLE/visibility scheduling supersedes it."
+        default=None, description="Legacy compatibility field; the global refresh setting supersedes it."
     )
 
 
@@ -61,7 +61,7 @@ class AccountUpdateBasic(BaseModel):
     smtp_username: str | None = None
     smtp_password: str | None = None
     sync_interval_seconds: int | None = Field(
-        default=None, description="Legacy compatibility field; fixed IDLE/visibility scheduling supersedes it."
+        default=None, description="Legacy compatibility field; the global refresh setting supersedes it."
     )
     is_active: bool | None = None
 

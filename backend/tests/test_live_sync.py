@@ -160,10 +160,13 @@ async def test_idle_renewal_and_unsupported_fallback(mail, monkeypatch):
     socket = IdleSocket()
     monkeypatch.setattr(scheduler, "open_imap_connection", AsyncMock(return_value=socket))
     monkeypatch.setattr(scheduler, "IDLE_RENEW_SECONDS", 0.01)
+    scheduled = []
+    monkeypatch.setattr(requests, "request_sync", lambda *args: scheduled.append(args))
     task = asyncio.create_task(scheduler._watch(mail.account_id, folder_id, "INBOX"))
     await eventually(lambda: socket.done > 0)
     task.cancel()
     await asyncio.gather(task, return_exceptions=True)
+    assert scheduled == [(mail.account_id, {folder_id}, False)]
     socket = IdleSocket(False)
     monkeypatch.setattr(scheduler, "open_imap_connection", AsyncMock(return_value=socket))
     task = asyncio.create_task(scheduler._watch(mail.account_id, folder_id, "INBOX"))
@@ -251,7 +254,7 @@ async def test_visibility_leases_multiple_tabs_and_expiry(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_policy_initial_full_visible_noninbox_and_hidden_safety(mail, monkeypatch):
+async def test_policy_global_interval_visible_hidden_and_polling(mail, monkeypatch):
     folder_id = await prepare(mail, monkeypatch)
     current = [1000.0]
     monkeypatch.setattr(scheduler.time, "monotonic", lambda: current[0])
@@ -271,19 +274,43 @@ async def test_policy_initial_full_visible_noninbox_and_hidden_safety(mail, monk
     live.presence("visible-tab", True)
     await scheduler._tick()
     archive_id = (await folders(mail))["Archive/Old"]["id"]
-    assert scheduled == [(mail.account_id, {archive_id}, True)]
+    assert scheduled == []
     scheduled.clear()
     live.presence("visible-tab", False)
     live.set_watcher(folder_id, state="polling")
     current[0] += 60
     await scheduler._tick()
-    assert scheduled == [(mail.account_id, {folder_id}, False)]
+    assert scheduled == []
     scheduled.clear()
-    live.set_watcher(folder_id, state="connected")
-    current[0] += 900
+    current[0] = 1899
+    await scheduler._tick()
+    assert scheduled == []
+    current[0] = 1900
     await scheduler._tick()
     assert (mail.account_id, {folder_id}, False) in scheduled
     assert (mail.account_id, {archive_id}, True) in scheduled
+    scheduled.clear()
+    # A runtime change applies to all accounts without restarting their watchers.
+    from app.db.models import AppSettings
+
+    async with mail.factory() as db:
+        db.add(AppSettings(id=1, password_hash="unused", sync_interval_seconds=300))
+        other = Account(name="Other", protocol="imap_basic")
+        db.add(other)
+        await db.commit()
+        other_id = other.id
+    await scheduler._tick()
+    assert scheduled == [(other_id,)]
+    scheduled.clear()
+    current[0] = 2199
+    live.presence("visible-tab", True)
+    await scheduler._tick()
+    assert scheduled == []
+    current[0] = 2200
+    await scheduler._tick()
+    assert (mail.account_id, {archive_id}, True) in scheduled
+    assert (mail.account_id, {folder_id}, False) in scheduled
+    assert (other_id, set(), True) in scheduled
 
 
 @pytest.mark.asyncio
@@ -387,7 +414,7 @@ async def test_sync_api_auth_scopes_presence_retry_and_sse_cleanup(mail, monkeyp
         assert calls == [(mail.account_id, {folder_id}, False)] * 2
         await client.post("/api/sync/presence", json={"client_id": "tab", "visible": True})
         assert live.visible()
-        assert (await client.get("/api/sync/connections")).json()["refresh_seconds"] == 60
+        assert (await client.get("/api/sync/connections")).json()["refresh_seconds"] == 900
         assert (await client.post("/api/sync/retry?account_id=999")).status_code == 404
         assert (
             await client.post(f"/api/sync/retry?account_id={mail.account_id}")

@@ -17,6 +17,7 @@ let notificationsOnly = [];
 let items = [];
 let activities = [];
 let pagination = false;
+let refreshSeconds = 900;
 const failures = new Set();
 const held = new Map();
 function hold(method, url) {
@@ -32,7 +33,7 @@ const account = { id: 1, name: "Test mail", color: "#4F46E5", protocol: "imap_ba
     { id: 1, imap_path: "INBOX", display_name: "Inbox", is_inbox: true, unread_count: 0 },
     { id: 2, imap_path: "Archive", display_name: "Archive", is_inbox: false, unread_count: 0 },
   ] };
-const snapshot = () => ({ health, refresh_seconds: 60, accounts: [{
+const snapshot = () => ({ health, refresh_seconds: refreshSeconds, accounts: [{
   account_id: 1, name: account.name, color: account.color, health, folders: [{
     folder_id: 1, name: "Inbox", is_inbox: true, mode: health === "yellow" ? "polling" : "idle",
     state: health === "red" ? "error" : health === "yellow" ? "polling" : "connected",
@@ -62,6 +63,15 @@ const server = http.createServer(async (req, res) => {
     }
     let body = {};
     if (url.pathname === "/api/auth/me") body = { authenticated: true };
+    else if (url.pathname === "/api/settings") {
+      if (req.method === "PATCH") {
+        let raw = "";
+        for await (const chunk of req) raw += chunk;
+        refreshSeconds = JSON.parse(raw).sync_interval_seconds;
+        event("settings");
+      }
+      body = { sync_interval_seconds: refreshSeconds };
+    }
     else if (url.pathname === "/api/accounts") body = [account];
     else if (url.pathname.endsWith("/folders")) body = account.folders;
     else if (url.pathname === "/api/sync/activity") body = { items: activities };
@@ -255,6 +265,21 @@ const server = http.createServer(async (req, res) => {
     assert(calls.includes("POST /api/sync/retry?account_id=1"));
     await page.getByRole("link", { name: "Settings", exact: true }).click();
     await status().waitFor();
+    const interval = page.getByRole("spinbutton", { name: "Automatic refresh interval in minutes" });
+    await page.waitForFunction(() => document.querySelector('input[type="number"]')?.value === "15");
+    await interval.fill("30");
+    failures.add("PATCH /api/settings");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await page.getByRole("alert").filter({ hasText: "Could not save refresh interval" }).waitFor();
+    failures.delete("PATCH /api/settings");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await page.getByText("Refresh interval saved.", { exact: true }).waitFor();
+    assert.equal(refreshSeconds, 1800);
+    await status().click();
+    await page.getByText(/Scheduled refreshes run every 30 minutes/).waitFor();
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    await page.reload();
+    await page.waitForFunction(() => document.querySelector('input[type="number"]')?.value === "30");
     await page.getByRole("button", { name: "Edit", exact: true }).click();
     assert.equal(await page.getByText("Sync every", { exact: true }).count(), 0);
     await page.keyboard.press("Escape");

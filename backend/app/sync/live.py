@@ -83,8 +83,10 @@ async def snapshot() -> dict:
 
     from app.db.models import Account, Folder
     from app.db.session import async_session_factory
+    from app.services.app_settings import get_sync_interval
 
     async with async_session_factory() as db:
+        interval = await get_sync_interval(db)
         accounts = (
             await db.execute(
                 select(Account.id, Account.name, Account.color).where(Account.is_active.is_(True))
@@ -159,5 +161,5 @@ async def snapshot() -> dict:
         "health": health,
         "accounts": result,
         "visible": visible(),
-        "refresh_seconds": 60 if visible() else 900,
+        "refresh_seconds": interval,
     }
