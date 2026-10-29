@@ -7,7 +7,6 @@ export function useAccounts() {
   return useQuery({
     queryKey: ["accounts"],
     queryFn: () => api.get<Account[]>("/api/accounts"),
-    refetchInterval: 15_000,
   });
 }
 
@@ -47,7 +46,6 @@ export function useAccountFolders(accountId: number | null) {
     queryKey: ["accounts", accountId, "folders"],
     queryFn: () => api.get<Folder[]>(`/api/accounts/${accountId}/folders`),
     enabled: accountId !== null,
-    refetchInterval: 15_000,
   });
 }
 

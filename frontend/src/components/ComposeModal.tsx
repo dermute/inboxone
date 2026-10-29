@@ -117,6 +117,7 @@ export default function ComposeModal() {
             </Dialog.Close>
           </div>
 
+          {sendMutation.isPending && <p role="status" className="px-5 py-2 text-sm">Sending…</p>}
           {sendWarning ? (
             <div role="alert" className="flex-1 px-5 py-4 text-sm">
               {sendWarning}

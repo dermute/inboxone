@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 
+import { api } from "../api/client";
+import { toast } from "../store/toastStore";
 import { useMessage } from "../api/useMessages";
 import { useUiStore } from "../store/uiStore";
 import { ArrowLeftIcon, PaperclipIcon } from "./icons";
@@ -132,6 +134,20 @@ export default function MessageReadingPane({
               href={`/api/messages/${detail.id}/attachments/${a.part_index}`}
               className="glass-button inline-flex items-center gap-1.5 py-1"
               download
+              onClick={async (event) => {
+                event.preventDefault();
+                try {
+                  const blob = await api.download(`/api/messages/${detail.id}/attachments/${a.part_index}`);
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.download = a.filename || "attachment";
+                  link.click();
+                  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+                } catch (error) {
+                  toast(error instanceof Error ? error.message : "Could not download attachment");
+                }
+              }}
             >
               <PaperclipIcon className="h-3.5 w-3.5" /> {a.filename || "attachment"}
             </a>

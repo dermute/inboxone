@@ -42,7 +42,9 @@ class AccountCreateBasic(AccountBase):
     smtp_use_tls: bool = True
     smtp_username: str
     smtp_password: str
-    sync_interval_seconds: int | None = None
+    sync_interval_seconds: int | None = Field(
+        default=None, description="Legacy compatibility field; fixed IDLE/visibility scheduling supersedes it."
+    )
 
 
 class AccountUpdateBasic(BaseModel):
@@ -58,7 +60,9 @@ class AccountUpdateBasic(BaseModel):
     smtp_use_tls: bool | None = None
     smtp_username: str | None = None
     smtp_password: str | None = None
-    sync_interval_seconds: int | None = None
+    sync_interval_seconds: int | None = Field(
+        default=None, description="Legacy compatibility field; fixed IDLE/visibility scheduling supersedes it."
+    )
     is_active: bool | None = None
 
 

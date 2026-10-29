@@ -18,7 +18,6 @@ const emptyForm = {
   smtp_use_tls: true,
   smtp_username: "",
   smtp_password: "",
-  sync_interval_seconds: "",
   is_active: true,
 };
 
@@ -54,8 +53,6 @@ export default function AccountEditorModal({
         smtp_use_tls: account.smtp_use_tls,
         smtp_username: account.smtp_username ?? "",
         smtp_password: "",
-        sync_interval_seconds:
-          account.sync_interval_seconds != null ? String(account.sync_interval_seconds) : "",
         is_active: account.is_active,
       });
     } else {
@@ -83,7 +80,6 @@ export default function AccountEditorModal({
       smtp_use_tls: form.smtp_use_tls,
       smtp_username: form.smtp_username,
       smtp_password: form.smtp_password,
-      sync_interval_seconds: form.sync_interval_seconds ? Number(form.sync_interval_seconds) : undefined,
     });
     setCreatedId(created.id);
   }
@@ -101,7 +97,6 @@ export default function AccountEditorModal({
       smtp_port: form.smtp_port,
       smtp_use_tls: form.smtp_use_tls,
       smtp_username: form.smtp_username,
-      sync_interval_seconds: form.sync_interval_seconds ? Number(form.sync_interval_seconds) : null,
       is_active: form.is_active,
     };
     if (form.imap_password) payload.imap_password = form.imap_password;
@@ -115,7 +110,6 @@ export default function AccountEditorModal({
     const payload: Partial<AccountCreateBasic> & { is_active?: boolean } = {
       name: form.name,
       color: form.color,
-      sync_interval_seconds: form.sync_interval_seconds ? Number(form.sync_interval_seconds) : null,
       is_active: form.is_active,
     };
     await updateAccount.mutateAsync({ id: account.id, payload });
@@ -173,16 +167,6 @@ export default function AccountEditorModal({
                       value={form.color}
                       onChange={(e) => update("color", e.target.value)}
                       className="h-8 w-14 rounded-lg border border-black/10 bg-white/70 dark:border-white/10 dark:bg-white/10"
-                    />
-                  </Field>
-                  <Field label="Sync every">
-                    <input
-                      type="number"
-                      min={30}
-                      value={form.sync_interval_seconds}
-                      onChange={(e) => update("sync_interval_seconds", e.target.value)}
-                      placeholder="Default (seconds)"
-                      className="input"
                     />
                   </Field>
                   <label className="flex items-center gap-2">
@@ -306,16 +290,6 @@ export default function AccountEditorModal({
                       value={form.smtp_password}
                       onChange={(e) => update("smtp_password", e.target.value)}
                       placeholder={isEdit ? "Leave blank to keep the current password" : undefined}
-                      className="input"
-                    />
-                  </Field>
-                  <Field label="Sync every">
-                    <input
-                      type="number"
-                      min={30}
-                      value={form.sync_interval_seconds}
-                      onChange={(e) => update("sync_interval_seconds", e.target.value)}
-                      placeholder="Default (seconds)"
                       className="input"
                     />
                   </Field>

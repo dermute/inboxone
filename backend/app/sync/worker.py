@@ -15,6 +15,7 @@ from app.db.session import async_session_factory
 from app.services import imap_client
 from app.services.account_connection import open_imap_connection
 from app.services.mail_parser import parse_header_block
+from app.sync import live
 
 logger = logging.getLogger(__name__)
 _sync_semaphore = asyncio.Semaphore(get_settings().max_concurrent_syncs)
@@ -43,6 +44,10 @@ async def _discover_folders(client, db: AsyncSession, account: Account) -> list[
         if path not in paths:
             await db.delete(folder)
     await db.commit()
+    live.publish("folders", account_id=account.id)
+    from app.sync.scheduler import folders_changed
+
+    folders_changed()
     return [folder.id for folder in folders]
 
 
@@ -56,6 +61,7 @@ async def _sync_folder(client, db: AsyncSession, account: Account, folder: Folde
         folder.history_complete = False
     folder.last_uidvalidity = validity
     await db.commit()
+    live.publish("folder", account_id=account.id, folder_id=folder.id)
 
     # A UID snapshot bounds this pass even if mail arrives during the backfill.
     remote_uids = await asyncio.to_thread(imap_client.list_uids, client, folder.imap_path)
@@ -98,6 +104,7 @@ async def _sync_folder(client, db: AsyncSession, account: Account, folder: Folde
         folder.last_seen_uid = batch[-1]
         # Progress and messages commit atomically; a failed batch is safe to replay.
         await db.commit()
+        live.publish("folder", account_id=account.id, folder_id=folder.id)
 
     # Walk cached messages in bounded batches to reconcile all flags and expunges.
     # Fetch only UIDs from the successful SEARCH snapshot; missing FETCH responses
@@ -128,17 +135,21 @@ async def _sync_folder(client, db: AsyncSession, account: Account, folder: Folde
                 msg.is_flagged = b"\\Flagged" in flags[msg.uid]
                 msg.is_answered = b"\\Answered" in flags[msg.uid]
         await db.commit()
+        live.publish("folder", account_id=account.id, folder_id=folder.id)
     folder.history_complete = True
     folder.last_synced_at = datetime.now(UTC)
     await db.commit()
 
 
-async def sync_account(account_id: int) -> None:
+async def sync_account(
+    account_id: int, folder_ids: set[int] | None = None, discover: bool = True
+) -> None:
     lock = _account_locks.setdefault(account_id, asyncio.Lock())
     async with lock, _sync_semaphore, async_session_factory() as db:
         errors = []
         client = None
         account = None
+        cancelled = False
         try:
             account = await db.scalar(
                 select(Account)
@@ -147,26 +158,64 @@ async def sync_account(account_id: int) -> None:
             )
             if account is None:
                 return
-            with activity.track(f"Syncing {account.name}..."):
-                client = await open_imap_connection(db, account)
-                folder_ids = await _discover_folders(client, db, account)
-                for folder_id in folder_ids:
+            with activity.track(
+                f"Syncing {account.name}…",
+                kind="sync",
+                account_id=account_id,
+                folder_ids=folder_ids,
+            ):
+                opening = asyncio.create_task(open_imap_connection(db, account))
+                try:
+                    client = await asyncio.shield(opening)
+                except asyncio.CancelledError:
+                    client = await opening
+                    raise
+                existing_ids = {f.id for f in account.folders}
+                discovered = (
+                    await _discover_folders(client, db, account)
+                    if discover
+                    else [f.id for f in account.folders]
+                )
+                live.account_errors.pop(account_id, None)
+                for folder_id in discovered:
+                    if (
+                        folder_ids is not None
+                        and folder_id not in folder_ids
+                        and folder_id in existing_ids
+                    ):
+                        continue
                     folder = await db.get(Folder, folder_id)
                     if folder is None:
                         continue
                     path = folder.imap_path
                     try:
-                        with activity.track(f"Syncing {path}..."):
+                        with activity.track(
+                            f"Syncing {path}…",
+                            kind="sync",
+                            account_id=account_id,
+                            folder_id=folder_id,
+                        ):
                             await _sync_folder(client, db, account, folder)
+                        live.synced(account_id, folder_id)
                     except Exception as exc:
                         logger.exception("Sync failed for account %s folder %s", account_id, path)
-                        errors.append(f"{path}: {exc}")
+                        errors.append(f"{path}: {live.safe_error(exc)}")
+                        live.sync_failed(account_id, folder_id, exc)
                         await db.rollback()
                         # Rollback expires ORM state, including the account credentials.
                         await db.refresh(account)
+        except asyncio.CancelledError:
+            cancelled = True
+            if client is not None:
+                try:
+                    await asyncio.to_thread(client.shutdown)
+                except Exception:
+                    logger.debug("Cancelled connection already closed", exc_info=True)
+            raise
         except Exception as exc:
             logger.exception("Sync failed for account %s", account_id)
-            errors.append(str(exc))
+            errors.append(live.safe_error(exc))
+            live.sync_failed(account_id, None, exc)
             await db.rollback()
         finally:
             if client is not None:
@@ -174,7 +223,7 @@ async def sync_account(account_id: int) -> None:
                     await asyncio.to_thread(client.logout)
                 except Exception:
                     logger.exception("Logout failed for account %s", account_id)
-            if account is not None or errors:
+            if not cancelled and (account is not None or errors):
                 await db.execute(
                     update(Account)
                     .where(Account.id == account_id)

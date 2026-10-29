@@ -39,6 +39,11 @@ import msal
 
 logger = logging.getLogger(__name__)
 
+
+class OAuthReauthenticationRequired(RuntimeError):
+    """Token renewal needs an explicit account reconnect."""
+
+
 DEFAULT_CLIENT_ID = "9e5f94bc-e8a4-4e73-b8be-63364c29d753"
 
 IMAP_SCOPE = ["https://outlook.office.com/IMAP.AccessAsUser.All"]
@@ -172,10 +177,12 @@ async def get_access_token(
         app, cache = _load_app_with_cache(client_id, tenant, cache_json)
         account = _accounts_or_none(app)
         if account is None:
-            raise RuntimeError("No cached Microsoft account - account needs to be re-linked")
+            raise OAuthReauthenticationRequired(
+                "No cached Microsoft account - account needs to be re-linked"
+            )
         result = app.acquire_token_silent(scope, account=account)
         if not result or "access_token" not in result:
-            raise RuntimeError(
+            raise OAuthReauthenticationRequired(
                 f"Failed to refresh Microsoft token: {result.get('error_description') if result else 'no result'}"
             )
         new_cache = cache.serialize() if cache.has_state_changed else None

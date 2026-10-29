@@ -2,6 +2,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useAccounts } from "../api/useAccounts";
+import { api } from "../api/client";
 import { ApiError } from "../api/client";
 import { useDeleteMessage, useMarkAllRead, useMessages, useUpdateFlags } from "../api/useMessages";
 import AccountFilterRail from "../components/AccountFilterRail";
@@ -29,12 +30,17 @@ export default function InboxPage() {
   const setSelectedMessageId = useUiStore((s) => s.setSelectedMessageId);
 
   function selectAccount(id: number | null) {
+    void api.post(`/api/sync/trigger${id === null ? "" : `?account_id=${id}`}`).catch((err) => toast(err instanceof Error ? err.message : "Could not request refresh"));
     setSelectedMessageId(null);
     setSelectedAccountId(id);
     setSelectedFolderId(null);
   }
 
   function selectFolder(accountId: number, folderId: number | null) {
+    const folder = accounts?.find((account) => account.id === accountId)?.folders.find((item) => item.id === folderId);
+    void api.post(`/api/sync/trigger?${folderId === null ? `account_id=${accountId}` : `folder_id=${folderId}`}`, undefined,
+      { activity: { label: folder ? `Refreshing ${folder.display_name || folder.imap_path}…` : "Refreshing account…",
+        kind: "sync", account_id: accountId, folder_id: folderId } }).catch((err) => toast(err instanceof Error ? err.message : "Could not request refresh"));
     setSelectedMessageId(null);
     setSelectedAccountId(accountId);
     setSelectedFolderId(folderId);

@@ -9,6 +9,7 @@ import {
   useUpdateAccountFolders,
 } from "../api/useAccounts";
 import AccountEditorModal from "../components/AccountEditorModal";
+import ConnectionStatus from "../components/ConnectionStatus";
 import ConfirmDialog from "../components/ConfirmDialog";
 import Skeleton from "../components/Skeleton";
 import type { Account } from "../api/types";
@@ -160,7 +161,7 @@ export default function SettingsAccountsPage() {
           >
             &larr; Back to inbox
           </Link>
-          <h1 className="mt-1 text-xl font-semibold">Accounts</h1>
+          <div className="flex items-center gap-2"><h1 className="mt-1 text-xl font-semibold">Accounts</h1><ConnectionStatus /></div>
         </div>
         <button onClick={openCreate} className="glass-button-primary">
           Add account

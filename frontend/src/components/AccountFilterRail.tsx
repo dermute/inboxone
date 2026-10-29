@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 
 import type { Account } from "../api/types";
 import { inboxUnreadCount } from "../api/inboxes";
-import { toast } from "../store/toastStore";
 import { ChevronRightIcon } from "./icons";
 import InstallAppButton from "./InstallAppButton";
 import NotificationToggle from "./NotificationToggle";
@@ -48,7 +47,7 @@ export default function AccountFilterRail({
 
   return (
     <div className="glass-panel flex h-full w-60 shrink-0 flex-col overflow-hidden">
-      <div className="px-4 py-4">
+      <div className="flex items-center justify-between px-4 py-4">
         <h1 className="text-lg font-semibold">inboxone</h1>
       </div>
       <nav className="flex-1 overflow-y-auto px-2 pb-2">
@@ -98,20 +97,7 @@ export default function AccountFilterRail({
                   />
                   <span className="truncate">{account.name}</span>
                 </button>
-                {account.last_sync_status === "error" ? (
-                  // A button, not a title-only span: keyboard and touch users
-                  // have no other way to read the error message.
-                  <button
-                    onClick={() => toast(account.last_sync_error ?? "Sync error", { duration: 8000 })}
-                    title={account.last_sync_error ?? "Sync error"}
-                    aria-label={`Sync error for ${account.name}: ${account.last_sync_error ?? "unknown error"}`}
-                    className="shrink-0 rounded px-1 font-bold text-red-600 dark:text-red-400"
-                  >
-                    !
-                  </button>
-                ) : (
-                  <UnreadBadge count={unread} />
-                )}
+                <UnreadBadge count={unread} />
               </div>
               {isExpanded && (
                 <div className="ml-6 mt-0.5 space-y-0.5">

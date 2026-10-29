@@ -1,9 +1,10 @@
 import { useEffect } from "react";
-import { BrowserRouter, Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, Outlet, useNavigate } from "react-router-dom";
 
 import { useAuth } from "./api/useAuth";
 import NewMailWatcher from "./components/NewMailWatcher";
 import StatusBar from "./components/StatusBar";
+import LiveUpdates from "./components/LiveUpdates";
 import TabUnreadIndicator from "./components/TabUnreadIndicator";
 import Toaster from "./components/Toaster";
 import InboxPage from "./pages/InboxPage";
@@ -11,7 +12,7 @@ import LoginPage from "./pages/LoginPage";
 import SettingsAccountsPage from "./pages/SettingsAccountsPage";
 import { navigationRef } from "./store/navigation";
 
-function RequireAuth({ children }: { children: React.ReactElement }) {
+function RequireAuth() {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -24,8 +25,9 @@ function RequireAuth({ children }: { children: React.ReactElement }) {
   return (
     <>
       <div className="flex h-dvh flex-col">
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto"><Outlet /></div>
         <StatusBar />
+        <LiveUpdates />
       </div>
       <NewMailWatcher />
       <TabUnreadIndicator />
@@ -39,22 +41,10 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
-        <Route
-          path="/inbox"
-          element={
-            <RequireAuth>
-              <InboxPage />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/settings/accounts"
-          element={
-            <RequireAuth>
-              <SettingsAccountsPage />
-            </RequireAuth>
-          }
-        />
+        <Route element={<RequireAuth />}>
+          <Route path="/inbox" element={<InboxPage />} />
+          <Route path="/settings/accounts" element={<SettingsAccountsPage />} />
+        </Route>
         <Route path="*" element={<Navigate to="/inbox" replace />} />
       </Routes>
     </BrowserRouter>

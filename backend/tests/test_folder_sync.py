@@ -75,8 +75,10 @@ class Mailbox:
 
 
 @pytest_asyncio.fixture
-async def mail(monkeypatch):
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+async def mail(monkeypatch, tmp_path):
+    # File-backed SQLite matches production and supports concurrent independent
+    # sessions, including cancellation invalidating one connection.
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'mail.db'}")
 
     @event.listens_for(engine.sync_engine, "connect")
     def foreign_keys(connection, _record):

@@ -22,8 +22,10 @@ async def lifespan(app: FastAPI):
         await ensure_password_bootstrapped(db)
 
     await start_scheduler()
-    yield
-    await stop_scheduler()
+    try:
+        yield
+    finally:
+        await stop_scheduler()
 
 
 app = FastAPI(title="inboxone", lifespan=lifespan)

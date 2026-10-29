@@ -6,10 +6,7 @@ interface TriggerSyncResponse {
   triggered: number[];
 }
 
-// Queues a sync of every active account (or one account, if an id is given).
-// The request returns as soon as the syncs are queued server-side - progress
-// then shows up in the activity feed the status bar already polls, so there is
-// nothing to invalidate here.
+// Completion is delivered through the authenticated event stream.
 export function useTriggerSync() {
   return useMutation({
     mutationFn: (accountId?: number) =>

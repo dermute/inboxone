@@ -26,26 +26,26 @@ function buildQuery(filters: MessageFilters, cursor?: string | null) {
 }
 
 export function useMessages(filters: MessageFilters) {
+  const cache = useQueryClient();
   return useInfiniteQuery({
     queryKey: ["messages", filters],
-    queryFn: ({ pageParam }) =>
-      api.get<MessageListPage>(`/api/messages?${buildQuery(filters, pageParam)}`),
+    queryFn: ({ pageParam, signal }) =>
+      api.get<MessageListPage>(`/api/messages?${buildQuery(filters, pageParam)}`, {
+        signal, activity: { label: pageParam ? "Loading more messages…" :
+          cache.getQueryData(["messages", filters]) ? "Refreshing messages…" : "Loading messages…",
+          kind: "list", priority: 25, account_id: filters.accountId, folder_id: filters.folderId },
+      }),
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.next_cursor,
-    refetchInterval: 15_000,
   });
 }
 
-// Poll inbox folders across accounts, excluding historical backfills. A membership
+// Observe inbox folders across accounts, excluding historical backfills. A membership
 // change uses a fresh query so notification tracking can establish a new baseline.
 export function useRecentUnread(membership: string) {
   return useQuery({
     queryKey: ["messages", "recent-unread", membership],
     queryFn: () => api.get<MessageListPage>("/api/messages?unread_only=true&notifications_only=true&limit=200"),
-    refetchInterval: 20_000,
-    // Without this, React Query pauses the interval entirely while the tab is
-    // backgrounded - the new-mail notifier would never see anything to diff against.
-    refetchIntervalInBackground: true,
   });
 }
 
@@ -53,11 +53,13 @@ export function useMessage(id: number | null) {
   const queryClient = useQueryClient();
   return useQuery({
     queryKey: ["messages", "detail", id],
-    queryFn: async () => {
-      const detail = await api.get<MessageDetail>(`/api/messages/${id}`);
+    queryFn: async ({ signal }) => {
+      const detail = await api.get<MessageDetail>(`/api/messages/${id}`, { signal, activity: {
+        label: queryClient.getQueryData(["messages", "detail", id]) ? "Refreshing message…" : "Opening message…",
+        kind: "message", message_id: id,
+      } });
       // Opening a message marks it read server-side (if it wasn't already), which
-      // changes per-account/folder unread counts - the sidebar badges otherwise have
-      // no way to know that happened until their own next independent poll.
+      // changes unread counts, so refresh the list and sidebar caches.
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       queryClient.invalidateQueries({ queryKey: ["messages"], exact: false, predicate: (query) =>
         query.queryKey[1] !== "detail"

@@ -26,9 +26,8 @@ function notifyNewMessage(message: MessageSummary): void {
   };
 }
 
-// Renders nothing - polls for newly-arrived unread mail in marked inboxes across accounts,
-// regardless of what's currently on screen, and fires a browser notification for
-// anything that wasn't there on the previous poll.
+// Observe event-refreshed unread mail across marked inboxes, including hidden tabs.
+// Notify only messages added after this session's initial cache baseline.
 export default function NewMailWatcher() {
   const enabled = useNotificationStore((s) => s.enabled);
   const { data: accounts } = useAccounts();
@@ -51,7 +50,7 @@ export default function NewMailWatcher() {
     const currentIds = new Set(messages.map((m) => m.id));
 
     if (seenIds.current === null) {
-      // First poll of the session: record the baseline without notifying, so opening
+      // First response of the session: record the baseline without notifying, so opening
       // the app never fires a wall of notifications for mail that was already unread.
       seenIds.current = currentIds;
       return;

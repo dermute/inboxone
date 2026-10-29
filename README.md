@@ -29,8 +29,8 @@ attachments are fetched on demand and are not persisted.
 
 ## Architecture (brief)
 
-- **Backend**: Python (FastAPI), SQLAlchemy async + SQLite, APScheduler for background
-  IMAP polling, `IMAPClient` for IMAP, `aiosmtplib` for basic-auth SMTP sending, `msal`
+- **Backend**: Python (FastAPI), SQLAlchemy async + SQLite, supervised background
+  IMAP IDLE and reconciliation, `IMAPClient` for IMAP, `aiosmtplib` for basic-auth SMTP sending, `msal`
   for Microsoft OAuth2 device-code sign-in, Microsoft Graph for sending mail from
   Outlook accounts.
 - **Frontend**: React + TypeScript + Vite + TailwindCSS + TanStack Query + Zustand.
@@ -92,7 +92,9 @@ notifications in the browser's permission prompt. Windows notifications must als
 be enabled for the browser/app. Keep inboxone open (minimized is fine) to receive
 notifications; closing all its windows and tabs stops the current notification
 watcher. Installation does not add background push notifications. Delivery timing
-depends on mail polling and browser background activity limits.
+depends on IMAP IDLE availability and browser background activity limits. Hidden tabs
+keep their live event connection, but browser suspension may delay notifications.
+Backend inbox watching continues even when all browser windows are closed.
 
 The PNG app icons are generated from the envelope artwork in
 `frontend/public/favicon.svg`. After changing its geometry, regenerate them with
@@ -130,7 +132,7 @@ not need to register an Azure application.
 | `SECRET_KEY` | Random secret used to sign the session cookie. |
 | `ENCRYPTION_KEY` | Fernet key used to encrypt stored IMAP/SMTP passwords and OAuth tokens at rest. Do not rotate after accounts exist without a migration - existing encrypted values would become unreadable. |
 | `DATABASE_URL` | SQLite connection string (defaults to the `/data` bind mount). |
-| `SYNC_DEFAULT_INTERVAL_SECONDS` | Default IMAP polling interval per account (minimum 30s). |
+| `SYNC_DEFAULT_INTERVAL_SECONDS` | Legacy compatibility setting; fixed refresh timing below supersedes it. |
 
 ## Forgot your password?
 
@@ -165,12 +167,60 @@ old one - no need to touch `.env` or restart anything.
 
 ## Folders and synchronization
 
-All selectable folders are discovered on each sync, including newly created folders.
+All selectable folders are discovered on startup and scheduled account refreshes,
+including newly created folders.
 In **Settings → Accounts → Inbox folders**, check the folders to include in inbox views.
 These choices do not change provider folders or stop other folders from syncing.
 Expand an account in the sidebar to browse any folder; selecting the account itself
 shows only its marked inbox folders. Search and “Mark all as read” apply within the
 selected inbox or folder view.
+
+Each inbox-marked folder of an active account has its own persistent IMAP IDLE
+connection. Changes trigger reconciliation and committed updates reach open pages
+through an authenticated server-sent event stream. IDLE renews every 10 minutes;
+connections retry with jittered exponential backoff from 5 seconds to 5 minutes,
+using fresh OAuth credentials and catching up after reconnecting. Unsupported IDLE
+or provider connection limits visibly fall back to 60-second inbox polling.
+Healthy IDLE folders also reconcile every 15 minutes as a safety net.
+
+Other folders and folder discovery refresh every 60 seconds while any authenticated
+page is visible, otherwise every 15 minutes. Visibility leases renew every 20 seconds
+and expire after 60 seconds, so multiple tabs and unexpectedly closed browsers are
+handled together. Opening, reloading, or returning to a visible page requests a full
+refresh. Every folder click requests that folder's refresh while showing cached mail
+immediately. Requests across tabs merge with running work, with at most one merged
+follow-up pass per account. Account work remains serialized and globally bounded.
+The legacy `sync_interval_seconds` API/database field and interval environment settings
+remain accepted for compatibility; they no longer control refresh timing.
+
+The connection button in the bottom status bar (also accessible in Settings)
+opens connection details, last successful syncs, sanitized errors, retry
+times, per-account Retry, and Refresh all. Green means all active inbox connections
+and reconciliations are healthy. Yellow means connecting, retrying, polling fallback,
+or a disconnected browser event stream; browser cache polling then runs every 60
+seconds. Red means an authentication/configuration failure or reconciliation failure
+awaiting successful recovery. The worst active state determines the overall color;
+disabled accounts are excluded, and no active accounts produces a neutral status.
+
+The bottom status bar remains visible while browsing folders or reading messages,
+including on mobile. A separate spinner and action label show queued or running
+work immediately: opening or refreshing messages, syncing folders, sending,
+downloading attachments, deleting, and updating read status. Cached content stays
+visible during refreshes. Actions in the current tab take priority over background
+sync; “+N more” indicates additional work, listed in the connection dialog.
+Connection health keeps its own color while work runs. Waiting in IMAP IDLE,
+presence renewals, and event heartbeats do not make the app appear busy.
+Activity travels over the same event stream; if it disconnects, visible pages check
+activity every two seconds until reconnection. Mail cache fallback remains every
+60 seconds. Failed and cancelled operations clear their busy state; errors retain
+their existing alerts and retry controls.
+
+Persistent watchers use one server connection and one dedicated waiting thread per
+marked inbox, plus transient connections for normal mail operations. Account edits,
+OAuth reconnects, inbox choices, deactivation, and deletion update watchers automatically.
+Keep a single backend process: presence, event subscriptions, and connection state are
+held in memory. Reverse proxies must allow long-lived `/api/sync/events` responses;
+this endpoint disables buffering and caching and sends a heartbeat every 15 seconds.
 
 The first sync imports all message headers in batches of 200 and resumes after an
 interruption. Larger accounts may take time to finish. Bodies and attachments require
@@ -214,11 +264,25 @@ npm run dev
 
 The Vite dev server proxies `/api` requests to `http://localhost:8000`.
 
+## Verification
+
+Run `pytest -q` from `backend` after installing the development dependencies, and
+`npm run build` from `frontend`. The live-sync backend tests use fake IMAP sockets
+and an isolated SQLite database, including reconnects, IDLE fallback, UIDVALIDITY,
+visibility leases, event ordering, request merging, and account lifecycle changes.
+
+The optional browser smoke test uses the production build and a local fake API; it
+never contacts real mail accounts. With `playwright-core` and Chromium available, run
+`node scripts/verify-live-sync.cjs` from `frontend` after building. Set `CHROMIUM_PATH`
+if using a system Chromium, and `PLAYWRIGHT_MODULE` if the package is installed
+outside the frontend. This checks live messages/counts, notification history suppression,
+reconnection, activity lifetimes and foreground priority, status colors, retry controls,
+Settings, and the mobile status bar and dialog.
+
 ## Known limitations / roadmap
 
-- No IMAP IDLE or push updates yet — the backend polls each account on an interval
-  (default 60s) and the frontend polls the API every 15s. New mail typically appears
-  within a minute.
+- Browser notifications require an open browser/app instance. Closed-app push
+  notifications are not supported; suspended browsers may delay delivery.
 - No Gmail OAuth - Gmail accounts are configured as generic IMAP/SMTP using an App
   Password.
 - Single user, single SQLite database - not designed for multiple concurrent users.

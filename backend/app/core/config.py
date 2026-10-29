@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     secret_key: str
     encryption_key: str
     database_url: str = "sqlite+aiosqlite:////data/app.db"
+    # Legacy settings retained for compatibility; the supervisor uses fixed policy.
     sync_default_interval_seconds: int = 60
     sync_min_interval_seconds: int = 30
     max_concurrent_syncs: int = 5

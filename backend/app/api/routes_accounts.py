@@ -158,7 +158,7 @@ async def delete_account(account_id: int, db: DBSession) -> dict:
 async def test_connection(account_id: int, db: DBSession) -> TestConnectionResult:
     account = await _get_account_or_404(db, account_id)
 
-    with activity.track(f"Testing {account.name}..."):
+    with activity.track(f"Testing {account.name}…", kind="test", account_id=account.id):
         imap_ok, imap_error = True, None
         try:
             client = await open_imap_connection(db, account)
@@ -207,4 +207,5 @@ async def update_account_folders(
             folder.display_name = selection.display_name
     await db.commit()
     await db.refresh(account, attribute_names=["folders"])
+    _sync_scheduler_upsert(account.id)
     return account.folders

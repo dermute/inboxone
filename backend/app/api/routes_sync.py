@@ -1,13 +1,17 @@
 import asyncio
+import json
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.core import activity
 from app.core.security import require_session
-from app.db.models import Account
+from app.db.models import Account, Folder
 from app.db.session import DBSession
-from app.sync.worker import sync_account
+from app.sync import live
+from app.sync.requests import request_sync
 
 router = APIRouter(prefix="/api/sync", tags=["sync"], dependencies=[Depends(require_session)])
 
@@ -17,33 +21,94 @@ async def get_activity() -> dict:
     return {"items": activity.snapshot()}
 
 
-# asyncio only keeps weak references to running tasks, so a fire-and-forget sync can
-# be garbage-collected mid-flight unless something holds on to it.
-_background_syncs: set[asyncio.Task] = set()
+class Presence(BaseModel):
+    client_id: str = Field(min_length=1, max_length=128)
+    visible: bool
 
 
-def _spawn_sync(account_id: int) -> None:
-    task = asyncio.create_task(sync_account(account_id))
-    _background_syncs.add(task)
-    task.add_done_callback(_background_syncs.discard)
+@router.post("/presence")
+async def set_presence(payload: Presence) -> dict:
+    live.presence(payload.client_id, payload.visible)
+    return {"ok": True}
+
+
+@router.get("/connections")
+async def connections() -> dict:
+    return await live.snapshot()
+
+
+@router.get("/events")
+async def events(request: Request):
+    async def stream():
+        queue: asyncio.Queue = asyncio.Queue(maxsize=64)
+        live.subscribers.add(queue)
+        try:
+            yield (
+                "data: "
+                + json.dumps(
+                    {
+                        "type": "snapshot",
+                        "status": await live.snapshot(),
+                        "items": activity.snapshot(),
+                    }
+                )
+                + "\n\n"
+            )
+            while not await request.is_disconnected():
+                try:
+                    event = await asyncio.wait_for(queue.get(), 15)
+                    if event["type"] == "snapshot":
+                        event["status"] = await live.snapshot()
+                        event["items"] = activity.snapshot()
+                    yield "data: " + json.dumps(event) + "\n\n"
+                except TimeoutError:
+                    yield ": heartbeat\n\n"
+        finally:
+            live.subscribers.discard(queue)
+
+    return StreamingResponse(
+        stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-store",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post("/trigger")
-async def trigger_sync(db: DBSession, account_id: int | None = None) -> dict:
-    # Returns as soon as the syncs are queued rather than awaiting them: a full sync
-    # across several accounts can take minutes, far longer than a browser or reverse
-    # proxy will hold a request open. Callers watch /api/sync/activity for progress.
-    # Concurrency stays bounded by the sync worker's own semaphore, and each account's
-    # failures are recorded against that account instead of surfacing here.
+async def trigger_sync(
+    db: DBSession, account_id: int | None = None, folder_id: int | None = None
+) -> dict:
+    if folder_id is not None:
+        folder = await db.get(Folder, folder_id)
+        if folder is None:
+            raise HTTPException(404, "Folder not found")
+        if account_id is not None and account_id != folder.account_id:
+            raise HTTPException(400, "Folder does not belong to account")
+        account_id = folder.account_id
+    query = select(Account.id).where(Account.is_active.is_(True))
     if account_id is not None:
-        _spawn_sync(account_id)
-        return {"triggered": [account_id]}
-
-    result = await db.execute(select(Account.id).where(Account.is_active.is_(True)))
-    ids = [row[0] for row in result.all()]
+        query = query.where(Account.id == account_id)
+    ids = list((await db.scalars(query)).all())
     for aid in ids:
-        _spawn_sync(aid)
+        request_sync(aid, {folder_id} if folder_id is not None else None, folder_id is None)
     return {"triggered": ids}
+
+
+@router.post("/retry")
+async def retry(db: DBSession, account_id: int) -> dict:
+    from app.sync.scheduler import schedule_account_sync
+
+    active = await db.scalar(
+        select(Account.id).where(Account.id == account_id, Account.is_active.is_(True))
+    )
+    if active is None:
+        raise HTTPException(404, "Active account not found")
+    schedule_account_sync(account_id)
+    # Queue catch-up immediately, including while the old connection shuts down.
+    request_sync(account_id)
+    return {"triggered": [account_id]}
 
 
 @router.get("/status")
@@ -66,7 +131,9 @@ async def sync_status(db: DBSession) -> list[dict]:
             "name": row.name,
             "last_sync_at": row.last_sync_at,
             "last_sync_status": row.last_sync_status,
-            "last_sync_error": row.last_sync_error,
+            "last_sync_error": "Mail synchronization failed. Retry or check account settings."
+            if row.last_sync_error
+            else None,
         }
         for row in result.all()
     ]

@@ -154,7 +154,9 @@ async def mark_all_read(
         for m in account_messages:
             by_folder.setdefault(m.folder.imap_path, []).append(m)
 
-        with activity.track(f"Marking {account.name} as read..."):
+        with activity.track(
+            f"Updating read status for {account.name}…", kind="flags", account_id=account.id
+        ):
             try:
                 client = await open_imap_connection(db, account)
             except Exception:
@@ -181,9 +183,22 @@ async def mark_all_read(
     return {"updated": updated}
 
 
-async def _fetch_raw(db: AsyncSession, message: Message, mark_seen: bool = False) -> bytes:
+async def _fetch_raw(
+    db: AsyncSession, message: Message, mark_seen: bool = False, activity_kind: str = "message"
+) -> bytes:
     account = message.account
-    with activity.track(f"Fetching message from {account.name}..."):
+    label = (
+        f"Downloading attachment from {account.name}…"
+        if activity_kind == "attachment"
+        else f"Opening message from {account.name}…"
+    )
+    with activity.track(
+        label,
+        kind=activity_kind,
+        account_id=account.id,
+        folder_id=message.folder_id,
+        message_id=message.id,
+    ):
         client = None
         try:
             client = await open_imap_connection(db, account)
@@ -271,7 +286,7 @@ async def get_attachment(message_id: int, part_index: str, db: DBSession):
     if message is None:
         raise HTTPException(status_code=404, detail="Message not found")
 
-    parsed = await _fetch_raw(db, message)
+    parsed = await _fetch_raw(db, message, activity_kind="attachment")
     try:
         payload, content_type, filename = mail_parser.extract_attachment_bytes(parsed, part_index)
     except ValueError as exc:
@@ -300,7 +315,13 @@ async def update_flags(message_id: int, payload: FlagsUpdate, db: DBSession) -> 
                 [message.uid], [b"\\Flagged"]
             )
 
-    with activity.track(f"Updating {message.account.name}..."):
+    with activity.track(
+        f"Updating read status for {message.account.name}…",
+        kind="flags",
+        account_id=message.account_id,
+        folder_id=message.folder_id,
+        message_id=message.id,
+    ):
         client = await open_imap_connection(db, message.account)
         try:
             await asyncio.to_thread(_apply_flags)
@@ -337,7 +358,13 @@ async def delete_message(message_id: int, db: DBSession) -> dict:
         raise HTTPException(status_code=404, detail="Message not found")
 
     account = message.account
-    with activity.track(f"Deleting message from {account.name}..."):
+    with activity.track(
+        f"Deleting message from {account.name}…",
+        kind="delete",
+        account_id=account.id,
+        folder_id=message.folder_id,
+        message_id=message.id,
+    ):
         client = await open_imap_connection(db, account)
         try:
             trash_path = await asyncio.to_thread(imap_client.find_trash_folder, client)
@@ -376,7 +403,9 @@ async def reply(message_id: int, payload: ReplyRequest, db: DBSession) -> dict:
         raise HTTPException(status_code=404, detail="Send-as account not found")
 
     warning = None
-    with activity.track(f"Sending from {account.name}..."):
+    with activity.track(
+        f"Sending from {account.name}…", kind="send", account_id=account.id, message_id=message_id
+    ):
         if account.protocol == Protocol.OAUTH_MICROSOFT.value:
             token = await get_graph_token(db, account)
             await graph_client.send_mail(
@@ -421,7 +450,9 @@ async def forward(message_id: int, payload: ForwardRequest, db: DBSession) -> di
         raise HTTPException(status_code=404, detail="Send-as account not found")
 
     warning = None
-    with activity.track(f"Forwarding from {account.name}..."):
+    with activity.track(
+        f"Sending from {account.name}…", kind="send", account_id=account.id, message_id=message_id
+    ):
         if account.protocol == Protocol.OAUTH_MICROSOFT.value:
             token = await get_graph_token(db, account)
             await graph_client.send_mail(
