@@ -1,6 +1,12 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { api } from "./client";
+import type { Connections } from "./liveSync";
+
+export function useConnections() {
+  return useQuery({ queryKey: ["connections"],
+    queryFn: () => api.get<Connections>("/api/sync/connections") });
+}
 
 interface TriggerSyncResponse {
   triggered: number[];

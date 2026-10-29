@@ -13,6 +13,12 @@ export interface WorkItem {
 }
 export type WorkDescription = Omit<WorkItem, "id">;
 
+export function activityLabel(item: WorkItem, accounts: { account_id: number; name: string }[] = []): string {
+  if (item.account_id == null) return item.label;
+  const account = accounts.find((account) => account.account_id === item.account_id);
+  return `${account?.name || `Account #${item.account_id}`} · ${item.label}`;
+}
+
 export const useActivityStore = create<{
   local: WorkItem[];
   server: WorkItem[];

@@ -33,13 +33,14 @@ const account = { id: 1, name: "Test mail", color: "#4F46E5", protocol: "imap_ba
     { id: 1, imap_path: "INBOX", display_name: "Inbox", is_inbox: true, unread_count: 0 },
     { id: 2, imap_path: "Archive", display_name: "Archive", is_inbox: false, unread_count: 0 },
   ] };
+let extraAccounts = [];
 const snapshot = () => ({ health, refresh_seconds: refreshSeconds, accounts: [{
   account_id: 1, name: account.name, color: account.color, health, folders: [{
     folder_id: 1, name: "Inbox", is_inbox: true, mode: health === "yellow" ? "polling" : "idle",
     state: health === "red" ? "error" : health === "yellow" ? "polling" : "connected",
     last_success: new Date().toISOString(),
     error: health === "red" ? "Authentication failed. Check credentials or reconnect OAuth." : undefined,
-  }] }] });
+  }] }, ...extraAccounts] });
 function event(type, extra = {}) {
   for (const stream of streams) stream.write(`data: ${JSON.stringify({ type, account_id: 1, folder_id: 1, ...extra })}\n\n`);
 }
@@ -145,6 +146,25 @@ const server = http.createServer(async (req, res) => {
     assert.equal(syncCalls().length, beforeFocusSync, "tab return must not sync mail");
     assert.equal(mailCalls().length, beforeFocusMail, "tab return must not reload cached mail");
     assert.equal(await page.getByText("Sync now", { exact: true }).count(), 0);
+    // Identical folder names retain mailbox context in both activity views.
+    extraAccounts = [{ account_id: 2, name: "Work mail", color: "#22C55E", health, folders: [] }];
+    event("connection");
+    activity([
+      { id: "personal-inbox", label: "Syncing INBOX…", kind: "sync", account_id: 1, folder_id: 1 },
+      { id: "work-inbox", label: "Syncing INBOX…", kind: "sync", state: "queued", account_id: 2, folder_id: 3 },
+    ]);
+    const inboxLabel = footer.getByText("Test mail · Syncing INBOX…", { exact: true });
+    await inboxLabel.waitFor();
+    assert.equal(await inboxLabel.getAttribute("title"), "Test mail · Syncing INBOX…");
+    await status().click();
+    const inboxActivity = page.getByRole("region", { name: "Ongoing activity" });
+    await inboxActivity.getByText("Test mail · Syncing INBOX…", { exact: true }).waitFor();
+    await inboxActivity.getByText("Work mail · Syncing INBOX… (queued)", { exact: true }).waitFor();
+    await page.getByRole("button", { name: "Close", exact: true }).click();
+    activity([]);
+    extraAccounts = [];
+    event("connection");
+    await footer.getByText("Connected", { exact: true }).waitFor();
     // Historical imports appear in the message cache but never enter notifications.
     const message = { id: 1, account_id: 1, folder_id: 1, account_name: account.name,
       account_color: account.color, subject: "Historical import", from_addr: "sender@example.test",
@@ -167,7 +187,7 @@ const server = http.createServer(async (req, res) => {
       const release = hold("POST", "/api/sync/trigger?folder_id=2");
       const response = page.waitForResponse((response) => response.url().endsWith("/api/sync/trigger?folder_id=2"));
       await archive.click();
-      await footer.getByText("Refreshing Archive…", { exact: true }).waitFor();
+      await footer.getByText("Test mail · Refreshing Archive…", { exact: true }).waitFor();
       // The cached list is still readable and health stays green while busy.
       await page.getByText("Live arrival", { exact: true }).waitFor();
       assert(await status().locator("span").first().evaluate((node) => node.className.includes("bg-green-500")));
@@ -176,7 +196,7 @@ const server = http.createServer(async (req, res) => {
       assert.equal(await footer.getByText(/more$/).count(), 0);
       release();
       await response;
-      await footer.getByText("Refreshing Archive…", { exact: true }).waitFor();
+      await footer.getByText("Test mail · Refreshing Archive…", { exact: true }).waitFor();
       activity([]);
       await footer.getByText("Connected", { exact: true }).waitFor();
     }
@@ -208,11 +228,11 @@ const server = http.createServer(async (req, res) => {
     await status().click();
     const ongoing = page.getByRole("region", { name: "Ongoing activity" });
     await ongoing.getByText("Opening message…", { exact: true }).waitFor();
-    await ongoing.getByText("Syncing another account…", { exact: true }).waitFor();
+    await ongoing.getByText("Account #9 · Syncing another account…", { exact: true }).waitFor();
     await page.getByRole("button", { name: "Close", exact: true }).click();
     release();
     await page.getByRole("button", { name: "Reply", exact: true }).waitFor();
-    await footer.getByText("Syncing another account…", { exact: true }).waitFor();
+    await footer.getByText("Account #9 · Syncing another account…", { exact: true }).waitFor();
     activity([]);
 
     release = hold("GET", "/api/messages/1/attachments/1");
@@ -259,7 +279,7 @@ const server = http.createServer(async (req, res) => {
     pagination = true;
     release = hold("GET", "/api/messages?account_id=1&folder_id=2&cursor=next");
     event("folder");
-    await footer.getByText("Loading more messages…", { exact: true }).waitFor();
+    await footer.getByText("Test mail · Loading more messages…", { exact: true }).waitFor();
     pagination = false;
     release();
     await page.getByText("Older mail", { exact: true }).waitFor();
@@ -281,7 +301,7 @@ const server = http.createServer(async (req, res) => {
     for (const stream of streams) stream.end();
     await page.getByRole("button", { name: "Connection status: Connecting or polling" }).waitFor();
     activities = [{ id: "offline-work", label: "Server work while disconnected…", kind: "sync", account_id: 1 }];
-    await footer.getByText("Server work while disconnected…", { exact: true }).waitFor();
+    await footer.getByText("Test mail · Server work while disconnected…", { exact: true }).waitFor();
     await page.evaluate(() => {
       Object.defineProperty(document, "visibilityState", { configurable: true, get: () => "hidden" });
       document.dispatchEvent(new Event("visibilitychange"));

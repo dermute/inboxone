@@ -1,9 +1,9 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
-import { type Connections, useLiveSync } from "../api/liveSync";
-import { useActivityStore, visibleWork } from "../store/activityStore";
-import { useTriggerSync } from "../api/useSync";
+import { useLiveSync } from "../api/liveSync";
+import { activityLabel, useActivityStore, visibleWork } from "../store/activityStore";
+import { useConnections, useTriggerSync } from "../api/useSync";
 
 const colors: Record<string, string> = { green: "bg-green-500", yellow: "bg-yellow-500",
   red: "bg-red-500", neutral: "bg-gray-400" };
@@ -17,8 +17,7 @@ export default function ConnectionStatus({ showLabel = false }: { showLabel?: bo
   const server = useActivityStore((s) => s.server);
   const work = visibleWork(local, server);
   const connected = useLiveSync((s) => s.connected);
-  const query = useQuery({ queryKey: ["connections"],
-    queryFn: () => api.get<Connections>("/api/sync/connections") });
+  const query = useConnections();
   const refresh = useTriggerSync();
   const minutes = (query.data?.refresh_seconds ?? 900) / 60;
   const intervalLabel = `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
@@ -51,7 +50,7 @@ export default function ConnectionStatus({ showLabel = false }: { showLabel?: bo
           {work.length > 0 && <section aria-label="Ongoing activity" className="glass-card mb-3 p-3 text-sm">
             <h2 className="mb-2 font-semibold">Ongoing activity</h2>
             <ul className="space-y-1">{work.map((item) => <li key={item.id}>
-              {item.label}{item.state === "queued" ? " (queued)" : ""}
+              {activityLabel(item, query.data?.accounts)}{item.state === "queued" ? " (queued)" : ""}
             </li>)}</ul>
           </section>}
           {query.isError && <p role="alert">Could not load connection details.</p>}
